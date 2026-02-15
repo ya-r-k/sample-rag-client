@@ -1,3 +1,10 @@
+# AI IDEs
+**/.cursor/
+
+# Visual Studio
+**/.vs
+**/obj/Debug
+
 # Logs
 logs
 *.log
