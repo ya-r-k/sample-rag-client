@@ -1,87 +1,133 @@
 openapi: 3.0.3
 info:
   title: RAG Chat Client API
-  description: API contract for the RAG chat client. Client consumes this API; backend implements it.
+  description: API contract aligned with Demo RAG API (api-endpoints.md). Client consumes this API.
   version: 1.0.0
 
 servers:
   - url: /api
-    description: Local API base
+    description: Local API base (per api-endpoints.md)
 
 security:
-  - cookieAuth: []
   - bearerAuth: []
 
 paths:
-  # --- Auth ---
-  /auth/login:
+  # --- Scopes (Knowledge Groups) ---
+  /groups:
+    get:
+      summary: List scopes (knowledge groups)
+      description: Returns scopes; optionally only those caller can use.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Scope' }
     post:
-      summary: Login
+      summary: Create scope (admin only)
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [username, password]
+              required: [name]
               properties:
-                username: { type: string }
-                password: { type: string }
+                name: { type: string }
       responses:
-        '200':
-          description: Success; refresh token in HttpOnly cookie; access token in body
-          headers:
-            Set-Cookie:
-              schema: { type: string }
-              description: refresh_token=...; HttpOnly; Secure; SameSite=Strict
+        '201':
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  accessToken: { type: string }
-                  expiresIn: { type: integer }
-                  user: { $ref: '#/components/schemas/User' }
-        '401':
-          description: Invalid credentials
+              schema: { $ref: '#/components/schemas/Scope' }
+        '403':
+          description: Not admin
 
-  /auth/refresh:
+  /groups/{id}/users:
     post:
-      summary: Refresh access token
-      security: [{ cookieAuth: [] }]
+      summary: Add user to scope (admin only, optional)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                userIds: { type: array, items: { type: string } }
       responses:
         '200':
-          description: New access token
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  accessToken: { type: string }
-                  expiresIn: { type: integer }
-        '401':
-          description: Invalid or expired refresh token
+        '204':
+        '403':
+          description: Not admin
 
-  /auth/me:
-    get:
-      summary: Current user
+  /groups/{id}/users/{userId}:
+    delete:
+      summary: Remove user from scope (admin only, optional)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200':
+        '204':
+        '403':
+          description: Not admin
+
+  # --- Documents (Upload) ---
+  /documents:
+    post:
+      summary: Upload PDF (admin only; caller must have scope access)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [scopeId, file]
+              properties:
+                scopeId: { type: string }
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file, max 20MB
+          application/json:
+            schema:
+              type: object
+              required: [scopeId]
+              properties:
+                scopeId: { type: string }
+                data: { type: string }
+                  description: Base64-encoded file content
+                fileName: { type: string }
+      responses:
+        '201':
+        '204':
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: '#/components/schemas/Document' }
+        '400':
+          description: Not PDF or size exceeded
+        '403':
+          description: Not admin or no scope access
 
   # --- Chats ---
   /chats:
     get:
-      summary: List chats
+      summary: List chats (where caller is in ownerIds)
       parameters:
-        - name: search
+        - name: batchSize
           in: query
-          schema: { type: string }
-          description: Search by chat name or message content
-        - name: folderId
+          schema: { type: integer }
+        - name: lastUsedIndex
           in: query
-          schema: { type: string }
+          schema: { type: integer }
       responses:
         '200':
           content:
@@ -90,30 +136,31 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Chat' }
     post:
-      summary: Create chat (or submit first message when no chat)
+      summary: Create chat
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [query, documentGroupId]
+              required: [title, scopeId]
               properties:
-                query: { type: string }
-                documentGroupId: { type: string }
+                title: { type: string }
+                scopeId: { type: string }
+                ownerIds: { type: array, items: { type: string } }
       responses:
         '201':
-          description: Chat created; response may stream via SSE
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Chat' }
-        '400':
-          description: No documents in group; chat unavailable
+        '403':
+          description: No scope access
 
-  /chats/{chatId}:
+  /chats/{id}:
     get:
-      summary: Get chat with messages
+      summary: Get chat by id
+      description: Response may include optional `messages` array. If absent, client accumulates from POST /messages responses.
       parameters:
-        - name: chatId
+        - name: id
           in: path
           required: true
           schema: { type: string }
@@ -129,49 +176,26 @@ paths:
                       messages:
                         type: array
                         items: { $ref: '#/components/schemas/Message' }
+                        description: Optional; if API returns, use for history; else accumulate from send responses
         '404':
-          description: Chat not found or access denied
-    patch:
-      summary: Update chat (rename, pin, move to folder)
-      parameters:
-        - name: chatId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                isPinned: { type: boolean }
-                folderId: { type: string, nullable: true }
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Chat' }
-        '403':
-          description: Not owner (for rename/delete)
+          description: Chat not found
     delete:
-      summary: Delete chat (creator only)
+      summary: Delete chat (owner only)
       parameters:
-        - name: chatId
+        - name: id
           in: path
           required: true
           schema: { type: string }
       responses:
         '204':
-          description: Deleted
         '403':
-          description: Not creator
+          description: Not owner
 
-  /chats/{chatId}/messages:
+  /chats/{id}/owners:
     post:
-      summary: Submit question to chat
+      summary: Add owner(s) to chat (share chat)
       parameters:
-        - name: chatId
+        - name: id
           in: path
           required: true
           schema: { type: string }
@@ -180,25 +204,77 @@ paths:
           application/json:
             schema:
               type: object
-              required: [query]
               properties:
-                query: { type: string }
+                userId: { type: string }
+                userIds: { type: array, items: { type: string } }
+      responses:
+        '200':
+        '204':
+        '403':
+          description: Not existing owner
+
+  # --- Messages (including RAG and "send without chat") ---
+  /messages:
+    post:
+      summary: Send message (existing chat or create new chat)
+      description: |
+        - Existing chat: body = { chatId, text }
+        - New chat: body = { scopeId, text } — server creates chat with generated title, adds message, runs RAG, returns answer with sources.
+        Returns stream (SSE) or 201 with message + optional new chat.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [chatId, text]
+                  properties:
+                    chatId: { type: string }
+                    text: { type: string }
+                - type: object
+                  required: [scopeId, text]
+                  properties:
+                    scopeId: { type: string }
+                    text: { type: string }
       responses:
         '201':
-          description: Message added; response may stream via SSE
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Message' }
+              schema:
+                type: object
+                properties:
+                  message: { $ref: '#/components/schemas/Message' }
+                  chat: { $ref: '#/components/schemas/Chat' }
+                  answer: { type: string }
+                  sources:
+                    type: array
+                    items: { $ref: '#/components/schemas/Source' }
         '400':
-          description: No documents in group
+          description: Validation (e.g. missing scopeId)
+        '403':
+          description: Not owner if chatId provided; no scope access if scopeId for new chat
         '404':
           description: Chat not found
 
-  /chats/{chatId}/share:
-    post:
-      summary: Share chat with user
+  /messages/{messageId}/feedback:
+    get:
+      summary: Get feedback for message
       parameters:
-        - name: chatId
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Feedback' }
+    post:
+      summary: Submit like or dislike (idempotent per messageId, user)
+      parameters:
+        - name: messageId
           in: path
           required: true
           schema: { type: string }
@@ -207,277 +283,81 @@ paths:
           application/json:
             schema:
               type: object
-              required: [identifier]
+              required: [isLike]
               properties:
-                identifier: { type: string }
-                  description: Username or email of recipient
+                isLike: { type: boolean }
       responses:
         '200':
-          description: Access granted
-        '403':
-          description: Not owner
-        '404':
-          description: Recipient not found
-
-  /chats/{chatId}/revoke/{userId}:
-    delete:
-      summary: Revoke access for user
-      parameters:
-        - name: chatId
-          in: path
-          required: true
-          schema: { type: string }
-        - name: userId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
         '204':
-          description: Access revoked
-        '403':
-          description: Not owner or cannot revoke owner
 
-  # --- Document Groups ---
-  /document-groups:
+  # --- Files (download) ---
+  /files/assets/documents/{fileName}:
     get:
-      summary: List document groups
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/DocumentGroup' }
-    post:
-      summary: Create document group (admin only)
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name: { type: string }
-      responses:
-        '201':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DocumentGroup' }
-        '403':
-          description: Not admin
-
-  /document-groups/{groupId}:
-    get:
-      summary: Get group with document count
+      summary: Download file by name
+      description: Only via API; no static file serving of uploads.
       parameters:
-        - name: groupId
+        - name: fileName
           in: path
           required: true
           schema: { type: string }
       responses:
         '200':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DocumentGroup' }
-
-  # --- Documents ---
-  /documents:
-    get:
-      summary: List documents (admin only)
-      parameters:
-        - name: groupId
-          in: query
-          schema: { type: string }
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Document' }
-        '403':
-          description: Not admin
-    post:
-      summary: Upload PDF (admin only)
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file, groupId]
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: PDF file, max 20MB
-                groupId: { type: string }
-      responses:
-        '201':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Document' }
-        '400':
-          description: Invalid file (not PDF, >20MB, corrupted)
-        '403':
-          description: Not admin
-
-  /documents/{documentId}/view:
-    get:
-      summary: Open document at page (for citation links)
-      parameters:
-        - name: documentId
-          in: path
-          required: true
-          schema: { type: string }
-        - name: page
-          in: query
-          schema: { type: integer }
-      responses:
-        '200':
-          description: Document content or redirect to viewer
-        '302':
-          description: Redirect to document URL
+        '206':
+          description: Partial content
         '404':
-          description: Document not found
-
-  # --- Chat Folders ---
-  /chat-folders:
-    get:
-      summary: List user's folders
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/ChatFolder' }
-    post:
-      summary: Create folder
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name: { type: string }
-      responses:
-        '201':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ChatFolder' }
-
-  /chat-folders/{folderId}:
-    patch:
-      summary: Update folder or move chat into folder
-      parameters:
-        - name: folderId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                chatIds: { type: array, items: { type: string } }
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ChatFolder' }
-    delete:
-      summary: Delete folder
-      parameters:
-        - name: folderId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '204':
-          description: Deleted
+          description: File not found
 
 components:
   securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: refresh_token
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 
   schemas:
-    User:
-      type: object
-      required: [id, username, role]
-      properties:
-        id: { type: string }
-        username: { type: string }
-        email: { type: string }
-        role: { type: string, enum: [regular, admin] }
-
-    Chat:
-      type: object
-      required: [id, name, ownerId, createdAt, updatedAt]
-      properties:
-        id: { type: string }
-        name: { type: string }
-        ownerId: { type: string }
-        documentGroupId: { type: string }
-        isPinned: { type: boolean, default: false }
-        folderId: { type: string, nullable: true }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
-    Message:
-      type: object
-      required: [id, chatId, role, content, createdAt]
-      properties:
-        id: { type: string }
-        chatId: { type: string }
-        role: { type: string, enum: [user, assistant] }
-        content: { type: string }
-        citations:
-          type: array
-          items: { $ref: '#/components/schemas/Citation' }
-        createdAt: { type: string, format: date-time }
-
-    Citation:
-      type: object
-      required: [documentId, documentName, page]
-      properties:
-        documentId: { type: string }
-        documentName: { type: string }
-        page: { type: integer }
-        url: { type: string }
-
-    Document:
-      type: object
-      required: [id, name, groupId]
-      properties:
-        id: { type: string }
-        name: { type: string }
-        groupId: { type: string }
-        sizeBytes: { type: integer }
-        uploadedAt: { type: string, format: date-time }
-
-    DocumentGroup:
+    Scope:
       type: object
       required: [id, name]
       properties:
         id: { type: string }
         name: { type: string }
-        documentCount: { type: integer }
 
-    ChatFolder:
+    Chat:
       type: object
-      required: [id, name, userId]
+      required: [id, title, scopeId, ownerIds]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        scopeId: { type: string }
+        ownerIds: { type: array, items: { type: string } }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        chatId: { type: string }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Source:
+      type: object
+      required: [documentId, pageNumber]
+      properties:
+        documentId: { type: string }
+        pageNumber: { type: integer }
+
+    Document:
+      type: object
+      required: [id, name, scopeId]
       properties:
         id: { type: string }
         name: { type: string }
+        localLink: { type: string }
+        scopeId: { type: string }
+
+    Feedback:
+      type: object
+      properties:
+        messageId: { type: string }
         userId: { type: string }
-        chatIds: { type: array, items: { type: string } }
+        isLike: { type: boolean }

@@ -2,146 +2,129 @@
 
 **Feature**: 001-rag-chat-client  
 **Date**: 2025-02-15  
-**Source**: [spec.md](./spec.md) Key Entities, FR/UX requirements
+**Source**: [spec.md](./spec.md), [api-endpoints.md](../../api-endpoints.md)
+
+---
+
+## API Alignment
+
+This data model reflects the **Demo RAG API** (api-endpoints.md). Field names and shapes match the API contract.
 
 ---
 
 ## Entity Overview
 
-The client consumes API responses; it does not own persistence. This document describes the client-side view of entities and their validation rules.
+The client consumes API responses; it does not own persistence. Entities below use API field names.
 
 ---
 
 ## 1. User
 
-Represents a registered user; role determines capabilities.
+Represents a registered user; role from JWT claims.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | Unique identifier |
-| username | string | required | Display / login |
-| email | string | optional | For sharing by email |
-| role | `'regular' \| 'admin'` | required | regular: chat only; admin: + documents |
-
-**Relationships**: Owns chats; has access to shared chats; (if admin) manages documents and groups.
+| Field    | Type                   | Validation | Notes                                          |
+| -------- | ---------------------- | ---------- | ---------------------------------------------- |
+| id       | string                 | required   | Unique identifier                              |
+| username | string                 | required   | Display / login                                |
+| role     | `'regular' \| 'admin'` | required   | regular: chat only; admin: + documents, groups |
 
 ---
 
-## 2. Chat
+## 2. Scope (Knowledge Group)
 
-Represents a conversation; persisted by API.
+API path: `/api/groups`. Collection of documents; users select which scope to query.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | Unique identifier |
-| name | string | required | System-generated or user-renamed |
-| ownerId | string | required | Creator user ID |
-| documentGroupId | string | optional | Selected group for this chat |
-| isPinned | boolean | default false | Pinned chats in dedicated section |
-| folderId | string | optional | User-created folder |
-| createdAt | string (ISO 8601) | required | |
-| updatedAt | string (ISO 8601) | required | |
-
-**State**: Chat name may be delayed (UX-008: show "New chat" until API returns).
-
-**Relationships**: Has many Message; has many shared users (access list); belongs to ChatFolder (optional).
+| Field | Type   | Validation | Notes |
+| ----- | ------ | ---------- | ----- |
+| id    | string | required   | GUID  |
+| name  | string | required   |       |
 
 ---
 
-## 3. Message
+## 3. Chat
 
-A single entry in a chat; either user question or system response.
+API path: `/api/chats`. Represents a conversation.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | Unique identifier |
-| chatId | string | required | Parent chat |
-| role | `'user' \| 'assistant'` | required | |
-| content | string | required | Question or answer text |
-| citations | Citation[] | optional | Only for assistant messages |
-| createdAt | string (ISO 8601) | required | |
+| Field    | Type     | Validation | Notes                                          |
+| -------- | -------- | ---------- | ---------------------------------------------- |
+| id       | string   | required   | GUID                                           |
+| title    | string   | required   | System-generated or user-provided              |
+| scopeId  | string   | required   | Selected scope for this chat                   |
+| ownerIds | string[] | required   | Creator + shared users; caller must be in list |
+
+**Relationships**: Has many Message; ownerIds defines access.
+
+---
+
+## 4. Message
+
+A single entry in a chat; either user question or system response. Created via `POST /api/messages`.
+
+| Field     | Type              | Validation | Notes                      |
+| --------- | ----------------- | ---------- | -------------------------- |
+| id        | string            | optional   | From API response          |
+| chatId    | string            | optional   | When part of existing chat |
+| text      | string            | required   | Question or answer text    |
+| createdAt | string (ISO 8601) | optional   |                            |
 
 **Display order**: Chronological (UX-002).
 
 ---
 
-## 4. Citation (Source)
+## 5. Source (Citation)
 
-Reference to a document and page; links open document at that page.
+Reference to a document and page; from RAG response.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| documentId | string | required | |
-| documentName | string | required | Display label (e.g. "Document X") |
-| page | number | required | Page number (1-based) |
-| url | string | optional | Full URL to open in new tab |
+| Field      | Type   | Validation | Notes                 |
+| ---------- | ------ | ---------- | --------------------- |
+| documentId | string | required   | GUID                  |
+| pageNumber | number | required   | Page number (1-based) |
 
-**Rules**: Source links only to internal documents (FR-011); open in new tab/window (FR-002).
-
----
-
-## 5. Document
-
-PDF file in the system; belongs to a document group.
-
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | |
-| name | string | required | Display name |
-| groupId | string | required | Document group |
-| sizeBytes | number | optional | |
-| uploadedAt | string (ISO 8601) | optional | |
-
-**Client validation before upload**: PDF only, max 20MB (FR-015).
+**Rules**: Source links only to internal documents (FR-011); open in new tab/window (FR-002).  
+**File URL**: `GET /api/files/assets/documents/{fileName}` — client uses `localLink` or document name from upload response to construct URL.
 
 ---
 
-## 6. Document Group
+## 6. Document
 
-Collection of documents; users select which group to query.
+PDF file in the system; belongs to a scope. Response from `POST /api/documents`.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | |
-| name | string | required | |
-| documentCount | number | optional | Denormalized |
+| Field     | Type   | Validation | Notes                                  |
+| --------- | ------ | ---------- | -------------------------------------- |
+| id        | string | required   |                                        |
+| name      | string | required   | Display name                           |
+| localLink | string | optional   | Link or filename for download          |
+| scopeId   | string | required   | Scope (group) this document belongs to |
 
----
-
-## 7. Chat Folder
-
-User-created container for organizing chats.
-
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| id | string | required, non-empty | |
-| name | string | required | e.g. "Project X", "Personal" |
-| userId | string | required | Owner |
-| chatIds | string[] | optional | Chats in folder |
+**Client validation before upload**: PDF only, max 20MB (FR-015).  
+**Upload request**: `scopeId` + file (multipart or base64 `data` + `fileName`).
 
 ---
 
-## 8. Chat Access (Sharing)
+## 7. Feedback
 
-Maps users to chats with permissions.
+Like/dislike for a message. API path: `/api/messages/{messageId}/feedback`.
 
-| Field | Type | Validation | Notes |
-|-------|------|------------|-------|
-| chatId | string | required | |
-| userId | string | required | |
-| role | `'owner' \| 'shared'` | required | Owner cannot be demoted (FR-004) |
+| Field     | Type    | Validation | Notes                        |
+| --------- | ------- | ---------- | ---------------------------- |
+| messageId | string  | required   |                              |
+| isLike    | boolean | required   | true = like, false = dislike |
 
 ---
 
-## Validation Rules Summary
+## Features Not in API (Client-Side or Deferred)
 
-| Rule | Source |
-|------|--------|
-| PDF only, max 20MB | FR-015, UX-010 |
-| Chat name placeholder until API | UX-008 |
-| Citations open in new tab | FR-002 |
-| Source links internal only | FR-011 |
-| Owner cannot be removed | FR-004 |
+The following spec features are **not** provided by the current API. Client may implement client-side only or defer:
+
+| Feature                   | Spec Reference | API Support                                     |
+| ------------------------- | -------------- | ----------------------------------------------- |
+| Chat rename               | FR-009         | No PATCH /chats                                 |
+| Pin chats                 | FR-008, UX-005 | No                                              |
+| Chat folders              | FR-008         | No                                              |
+| Search by chat name       | FR-006         | No (list only, batchSize, lastUsedIndex)        |
+| Search by message content | FR-007         | No                                              |
+| Revoke chat access        | FR-005         | No explicit revoke; ownerIds is add-only in API |
+| List documents            | FR-014         | No GET /documents                               |
 
 ---
 
@@ -149,13 +132,13 @@ Maps users to chats with permissions.
 
 Per constitution: Zustand + persist for global UI state.
 
-| Store | Purpose |
-|-------|---------|
-| activeChatId | Current chat |
-| theme | dark/light/system |
-| language | ru/en |
-| documentGroupFilter | Selected group for queries |
-| sidebarCollapsed | UI preference |
+| Store            | Purpose                    |
+| ---------------- | -------------------------- |
+| activeChatId     | Current chat               |
+| theme            | dark/light/system          |
+| language         | ru/en                      |
+| scopeId          | Selected scope for queries |
+| sidebarCollapsed | UI preference              |
 
 ---
 
@@ -163,7 +146,7 @@ Per constitution: Zustand + persist for global UI state.
 
 Per constitution: idb-keyval ONLY for offline form drafts and unsent messages.
 
-| Key | Value |
-|-----|-------|
-| `draft:chat:{chatId}` | Unsent message text |
-| `draft:query` | Query input when no chat yet |
+| Key                   | Value                        |
+| --------------------- | ---------------------------- |
+| `draft:chat:{chatId}` | Unsent message text          |
+| `draft:query`         | Query input when no chat yet |

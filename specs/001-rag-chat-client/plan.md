@@ -7,12 +7,12 @@
 
 ## Summary
 
-RAG chat client with AI-powered Q&A, document management, chat sharing, and admin document upload. React + TypeScript + Vite SPA consuming a local API. Chat UI built with shadcn/ui (constitution-mandated); file upload via react-dropzone; custom TokenManager for internal token service (access token in memory, refresh in HttpOnly cookie). All dependencies MIT/Apache-2.0 for commercial use. Restrained color palette via CSS variables.
+RAG chat client with AI-powered Q&A, document management, chat sharing, and admin document upload. React + TypeScript + Vite SPA consuming a local API. Chat UI built with shadcn/ui, Headless UI, Lucide React (constitution-mandated); file upload via react-dropzone; TokenManager for 401 handling and silent refresh via configurable external auth endpoint (access token in memory, refresh token in HttpOnly cookie). All dependencies MIT/Apache-2.0 for commercial use. Restrained color palette via CSS variables.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.8+, React 19  
-**Primary Dependencies**: Vite v6+, TanStack Query v5.59+, Zustand v5, React Router v7, Framer Motion v12, react-i18next v15, Tailwind v3.4+, shadcn/ui, react-dropzone  
+**Primary Dependencies**: Vite v6+, TanStack Query v5.59+, Zustand v5, React Router v7, Framer Motion v12, react-i18next v15, Tailwind v3.4+, shadcn/ui, headlessui, lucide-react, react-dropzone  
 **Storage**: N/A (client-only; API handles persistence)  
 **Testing**: N/A (per constitution: no tests required)  
 **Target Platform**: Browser (SPA), modern evergreen browsers  

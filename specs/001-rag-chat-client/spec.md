@@ -15,7 +15,7 @@
 - Q: When a user clicks a source link, how does the document open? → A: New tab/window — Document opens in a new browser tab or window.
 - Q: When users "group" chats, what does that mean? → A: Folders — User creates folders and moves chats into them (e.g., "Project X", "Personal").
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Ask Question and Get Answer with Sources (Priority: P1)
 
@@ -152,7 +152,7 @@ A main page provides navigation: link to document upload (admins only), link to 
 - What happens when the user searches for a message that exists in no chat? The search returns no results or an empty state (UX-009).
 - What happens when the chat name from the API is delayed? The chat appears with a placeholder or "New chat" until the name arrives, then updates (UX-008).
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -210,14 +210,53 @@ The following requirements clarify and extend functional requirements for design
 
 ## Assumptions
 
-- Authentication and authorization (login, roles) are handled by the existing API; the client consumes session/role information.
-- Users can access multiple document groups; they select which group to query per chat or per query; the document group selector is shown in the chat UI when multiple groups exist (UX-001).
-- The local API exposes endpoints for: submitting queries, receiving responses with chat names and sources, uploading PDFs, creating/managing groups, listing documents, and chat CRUD operations.
+- Authentication and authorization (login, roles) are handled externally; the API uses Bearer JWT; role and identity from claims.
+- Users can access multiple scopes (document groups); they select which scope to query per chat or per query; the scope selector is shown in the chat UI when multiple groups exist (UX-001).
+- The local API (api-endpoints.md) exposes: submitting queries, receiving responses with chat titles and sources, uploading PDFs, creating/managing groups, and chat CRUD. List documents (GET /documents) is not in the current API.
 - Document viewing (opening at a specific page) is supported by the API or a dedicated viewer; the document opens in a new browser tab or window.
 - Source citation display format (inline vs. list, exact styling) is a design-time decision; each citation must indicate document and page (UX-003).
 - Chat list layout (sidebar, full-page, collapsible), search UI (input placement, name vs. content mode), and folder management UI are design-time decisions.
 
-## Success Criteria *(mandatory)*
+## API Alignment
+
+The client MUST align with the **Demo RAG API** ([api-endpoints.md](../../api-endpoints.md)). Contract: [contracts/openapi.yaml](./contracts/openapi.yaml).
+
+### API Terminology Mapping
+
+| Spec Term        | API Term                    |
+| ---------------- | --------------------------- |
+| Document group   | Scope (path: `/api/groups`) |
+| documentGroupId  | scopeId                     |
+| Chat name        | Chat title                  |
+| ownerId (single) | ownerIds (array)            |
+
+### API Endpoints (Summary)
+
+| Capability                          | Endpoint                                           |
+| ----------------------------------- | -------------------------------------------------- |
+| List/create scopes                  | GET/POST `/api/groups`                             |
+| Upload document                     | POST `/api/documents` (scopeId + file)             |
+| List/create chats                   | GET/POST `/api/chats`                              |
+| Get/delete chat                     | GET/DELETE `/api/chats/{id}`                       |
+| Share chat                          | POST `/api/chats/{id}/owners`                      |
+| Send message (new or existing chat) | POST `/api/messages` (scopeId+text or chatId+text) |
+| Feedback                            | POST/GET `/api/messages/{messageId}/feedback`      |
+| Download file                       | GET `/api/files/assets/documents/{fileName}`       |
+
+### Features Not Supported by Current API (Deferred)
+
+The following requirements are **deferred** — no implementation tasks until API support exists:
+
+| Requirement | Status | Reason |
+|-------------|--------|--------|
+| **FR-005** (revoke access) | Deferred | API has add-owner only; no remove-owner endpoint |
+| **FR-006** (search by name) | Client-side only | API returns list with batchSize/lastUsedIndex; client filters by title |
+| **FR-007** (search by content) | Deferred | No API support for message-content search |
+| **FR-008** (pin, folders) | Deferred | No API fields for pin or folder |
+| **FR-009** (rename chat) | Deferred | No PATCH /chats endpoint |
+| **FR-014** (list documents) | Deferred | No GET /documents; show local upload state only |
+
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
