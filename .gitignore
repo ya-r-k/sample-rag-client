@@ -1,3 +1,24 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+
+# Editor and IDE
+.vscode/
+.idea/
+
+# SampleRag client build artifacts
+SampleRag.Client/node_modules/
+SampleRag.Client/dist/
+
 # AI IDEs
 **/.cursor/
 

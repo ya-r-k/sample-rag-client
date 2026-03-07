@@ -8,23 +8,22 @@
 
 ## Prerequisites
 
-- Node.js 20+
-- npm or pnpm
+- Docker (Docker Engine / Docker Desktop)
 - Demo RAG API running (Bearer JWT auth)
 
 ---
 
-## Setup
+## Setup (Docker)
 
 ```bash
-# Clone and install
-npm install
+# 1. Перейти в директорию фронтенда
+cd SampleRag.Client
 
-# Copy env template (if provided)
-cp .env.example .env
+# 2. Собрать образ (Node 20 + Vite dev-сервер)
+docker build -t sample-rag-client .
 
-# Start dev server
-npm run dev
+# 3. Запустить контейнер с пробросом порта Vite (см. vite.config.ts)
+docker run --rm -p 61413:61413 sample-rag-client
 ```
 
 ---
@@ -107,6 +106,26 @@ See [contracts/openapi.yaml](./contracts/openapi.yaml) for full specification (a
 ---
 
 ## Scripts
+
+### Внутри контейнера (CI / локально через Docker)
+
+Базовый образ содержит Node и зависимости, поэтому любые npm-скрипты можно запускать как команду контейнера:
+
+```bash
+# Dev-сервер (по умолчанию CMD в Dockerfile)
+docker run --rm -p 61413:61413 sample-rag-client
+
+# Production build
+docker run --rm sample-rag-client npm run build
+
+# Preview production build (на основе собранного dist)
+docker run --rm -p 4173:4173 sample-rag-client npm run preview
+
+# Линтинг
+docker run --rm sample-rag-client npm run lint
+```
+
+### Опорные npm-скрипты (исполняются ТОЛЬКО внутри контейнера)
 
 | Command           | Purpose                  |
 | ----------------- | ------------------------ |

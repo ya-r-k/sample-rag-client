@@ -16,10 +16,23 @@ RAG chat client with AI-powered Q&A, document management, chat sharing, and admi
 **Storage**: N/A (client-only; API handles persistence)  
 **Testing**: N/A (per constitution: no tests required)  
 **Target Platform**: Browser (SPA), modern evergreen browsers  
-**Project Type**: Web (frontend only)  
+**Project Type**: Web (frontend only), Dockerized SPA (no local Node/npm on host)  
 **Performance Goals**: Answer in &lt;30s (SC-001), upload visible in &lt;10s (SC-005), loading visible within 500ms (SC-008)  
 **Constraints**: Access token in memory only; refresh token HttpOnly cookie; no localStorage/sessionStorage for tokens; offline support via Service Worker  
 **Scale/Scope**: Single frontend app; ~10–15 pages/views; FSD architecture
+
+### Runtime & Containerization
+
+- **Local execution model**: Application MUST be started via Docker; host machine is not required to have Node.js or npm installed.
+- **Current runtime choice**: Node.js 20 (alpine) inside container; Vite dev-server runs as container entrypoint (`npm run dev -- --host 0.0.0.0 --port 61413`).
+- **Production-ready option (Node-based, compatible with current implementation)**:
+  - Multi-stage Docker build: Stage 1 — Node builder (`npm install && npm run build`), Stage 2 — lightweight Node runtime serving static `dist/` via small HTTP server (e.g., `serve`).
+  - This keeps single-runtime (Node) for both build and serve phases, matches current toolchain, и упрощает отладку.
+- **Common industry alternative (для будущего исследования)**:
+  - Stage 1 — Node builder (как выше), Stage 2 — `nginx:alpine` или `caddy` для раздачи статического `dist/`.
+  - Плюсы: очень лёгкий рантайм, зрелые HTTP-серверы, широкое сообщество и готовые best practices (gzip/brotli, HTTP/2).
+  - Минусы для текущего проекта: дополнительный стек и конфиг nginx/caddy, усложнение пайплайна, отсутствие необходимости на раннем этапе.
+- **Decision for now**: использовать **Node.js как runtime внутри контейнера** (dev и потенциальный prod), но оставить возможность перехода на Nginx/Caddy-этап на уровне сборки, когда приложение стабилизируется и появятся требования к прод-оптимизации.
 
 ## Constitution Check
 

@@ -23,14 +23,14 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Vite + React + TypeScript project with `npm create vite@latest . -- --template react-ts` in `d:\concepts\rag-projects\sample-rag\sample-rag-client`
-- [ ] T002 [P] Configure ESLint v9+ and Prettier v3+ in `eslint.config.js` and `.prettierrc`
-- [ ] T003 [P] Configure husky pre-commit hooks in `.husky/`
-- [ ] T004 Create FSD structure: `src/app/`, `src/pages/`, `src/widgets/`, `src/features/`, `src/entities/`, `src/shared/` per plan.md
-- [ ] T005 Install dependencies: @tanstack/react-query ^5.59, zustand ^5, react-router-dom ^7, framer-motion ^12, react-i18next ^15, tailwindcss ^3.4, sass, idb-keyval ^7, react-dropzone, @headlessui/react, lucide-react
-- [ ] T006 Initialize shadcn/ui and add base components (Button, Input, ScrollArea); add Lucide React icons in `src/shared/ui/`
-- [ ] T007 Configure Tailwind CSS and SCSS with CSS variables for theming in `tailwind.config.js` and `src/app/styles/`
-- [ ] T008 Add environment config: `VITE_API_BASE_URL`, `VITE_APP_NAME`, `VITE_AUTH_REFRESH_URL` in `.env.example`
+- [x] T001 Vite + React + TypeScript project **already created** in `sample-rag\sample-rag-client\SampleRag.Client` (via create-vite). For new environments, scaffolding MUST be run via Dockerized Node image (no local npm).
+- [x] T002 [P] Configure ESLint v9+ and Prettier v3+ in `eslint.config.js` and `.prettierrc`
+- [x] T003 [P] Configure husky pre-commit hooks in `.husky/`
+- [x] T004 Create FSD structure: `src/app/`, `src/pages/`, `src/widgets/`, `src/features/`, `src/entities/`, `src/shared/` per plan.md
+- [x] T005 Install dependencies: @tanstack/react-query ^5.59, zustand ^5, react-router-dom ^7, framer-motion ^12, react-i18next ^15, tailwindcss ^3.4, sass, idb-keyval ^7, react-dropzone, @headlessui/react, lucide-react
+- [x] T006 Initialize shadcn/ui and add base components (Button, Input, ScrollArea); add Lucide React icons in `src/shared/ui/`
+- [x] T007 Configure Tailwind CSS and SCSS with CSS variables for theming in `tailwind.config.js` and `src/app/styles/`
+- [x] T008 Add environment config: `VITE_API_BASE_URL`, `VITE_APP_NAME`, `VITE_AUTH_REFRESH_URL` in `.env.example`
 
 ---
 
@@ -40,15 +40,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Create API client with Bearer JWT auth in `src/shared/api/client.ts` (fetch wrapper, Authorization header from token)
-- [ ] T010 Create auth store (Zustand) for access token in memory in `src/shared/api/auth-store.ts`
-- [ ] T011 Implement TokenManager: on 401, call configurable refresh endpoint (VITE_AUTH_REFRESH_URL) with credentials:include; store new token; retry request; on refresh failure, clear token (constitution II)
-- [ ] T012 Configure TanStack Query with retry rules (no 401/403 retry), staleTime 5min, refetchOnWindowFocus=false in `src/app/providers/query-provider.tsx`
-- [ ] T013 Setup React Router v7 with createBrowserRouter in `src/app/router.tsx`
-- [ ] T014 Setup react-i18next with lazy JSON for ru/en in `src/shared/lib/i18n/`
-- [ ] T015 Create base layout (header placeholder, footer placeholder, outlet) in `src/app/layout.tsx`
-- [ ] T016 Create Zustand UI store (theme, language, sidebarCollapsed) with persist in `src/shared/store/ui-store.ts`
-- [ ] T017 Add Framer Motion AnimatePresence for page transitions in `src/app/`
+- [x] T009 Create API client with Bearer JWT auth in `src/shared/api/client.ts` (fetch wrapper, Authorization header from token)
+- [x] T010 Create auth store (Zustand) for access token in memory in `src/shared/api/auth-store.ts`
+- [x] T011 Implement TokenManager: on 401, call configurable refresh endpoint (VITE_AUTH_REFRESH_URL) with credentials:include; store new token; retry request; on refresh failure, clear token (constitution II)
+- [x] T012 Configure TanStack Query with retry rules (no 401/403 retry), staleTime 5min, refetchOnWindowFocus=false in `src/app/providers/query-provider.tsx`
+- [x] T013 Setup React Router v7 with createBrowserRouter in `src/app/router.tsx`
+- [x] T014 Setup react-i18next with lazy JSON for ru/en in `src/shared/lib/i18n/`
+- [x] T015 Create base layout (header placeholder, footer placeholder, outlet) in `src/app/layout.tsx`
+- [x] T016 Create Zustand UI store (theme, language, sidebarCollapsed) with persist in `src/shared/store/ui-store.ts`
+- [x] T017 Add Framer Motion AnimatePresence for page transitions in `src/app/`
 
 **Checkpoint**: Foundation ready — user story implementation can begin
 
@@ -62,17 +62,17 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Create Scope and Source types in `src/entities/scope/model/types.ts`
-- [ ] T019 [P] [US1] Create Message and Chat types in `src/entities/chat/model/types.ts`
-- [ ] T020 [US1] Implement GET /api/groups in `src/shared/api/groups.ts`
-- [ ] T021 [US1] Implement POST /api/messages (scopeId+text, chatId+text) with SSE support in `src/shared/api/messages.ts`
-- [ ] T022 [US1] Create scope selector component in `src/features/ask-question/ui/scope-selector.tsx`
-- [ ] T023 [US1] Create query input component in `src/features/ask-question/ui/query-input.tsx`
-- [ ] T024 [US1] Create message list with user/assistant bubbles and citation links in `src/widgets/chat/ui/message-list.tsx`
-- [ ] T025 [US1] Create citation link component (opens GET /api/files/assets/documents/{fileName} in new tab) in `src/entities/chat/ui/citation-link.tsx`
-- [ ] T026 [US1] Create chat page with message list, query input, scope selector in `src/pages/chat/ui/chat-page.tsx`
-- [ ] T027 [US1] Wire chat page to POST /api/messages; handle streaming or 201 response; display answer and sources
-- [ ] T028 [US1] Add loading spinner during message submission (UX-007, SC-008)
+- [x] T018 [P] [US1] Create Scope and Source types in `src/entities/scope/model/types.ts`
+- [x] T019 [P] [US1] Create Message and Chat types in `src/entities/chat/model/types.ts`
+- [x] T020 [US1] Implement GET /api/groups in `src/shared/api/groups.ts`
+- [x] T021 [US1] Implement POST /api/messages (scopeId+text, chatId+text) with SSE support in `src/shared/api/messages.ts`
+- [x] T022 [US1] Create scope selector component in `src/features/ask-question/ui/scope-selector.tsx`
+- [x] T023 [US1] Create query input component in `src/features/ask-question/ui/query-input.tsx`
+- [x] T024 [US1] Create message list with user/assistant bubbles and citation links in `src/widgets/chat/ui/message-list.tsx`
+- [x] T025 [US1] Create citation link component (opens GET /api/files/assets/documents/{fileName} in new tab) in `src/entities/chat/ui/citation-link.tsx`
+- [x] T026 [US1] Create chat page with message list, query input, scope selector in `src/pages/chat/ui/chat-page.tsx`
+- [x] T027 [US1] Wire chat page to POST /api/messages; handle streaming or 201 response; display answer and sources
+- [x] T028 [US1] Add loading spinner during message submission (UX-007, SC-008)
 
 **Checkpoint**: User Story 1 complete — Q&A with sources works
 
@@ -185,6 +185,9 @@
 - [ ] T062 [US7] Apply restrained color palette via CSS variables (research.md)
 - [ ] T063 [US7] Add keyboard focus states (UX-011)
 
+- [ ] T068 [US4] Add empty state UI when chat name search returns no results (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
+- [ ] T069 [US4] Add empty state UI for empty chat folders (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
+
 **Checkpoint**: Full navigation and UX polish
 
 ---
@@ -194,11 +197,30 @@
 **Purpose**: Final improvements across all stories
 
 - [ ] T064 [P] Add error boundary and API error display (UX-007 retry affordance)
-- [ ] T065 [P] Add offline support placeholder (idb-keyval for drafts per constitution)
+- [ ] T065 [P] Add offline drafts persistence using idb-keyval for unsent messages/forms (per constitution)
+- [ ] T070 [P] Implement Service Worker registration and basic caching strategy (app shell + static assets) in `src/app/service-worker.ts` (or Vite SW plugin), satisfying constitution section III (API & Network offline support)
+- [ ] T071 [P] Integrate offline UX with Service Worker (fallbacks, retry messaging) and verify core flows behave correctly when offline where specified
 - [ ] T066 Run quickstart validation: npm run dev, npm run build, npm run lint
+    - Use Docker-based commands only (no local npm):
+      - `docker build -t sample-rag-client ./SampleRag.Client`
+      - `docker run --rm -p 61413:61413 sample-rag-client` (dev)
+      - `docker run --rm sample-rag-client npm run build`
+      - `docker run --rm sample-rag-client npm run lint`
 - [ ] T067 Code cleanup: remove any `any`, ensure strict TypeScript
 
 ---
+
+## Phase 11: Deferred / API-Dependent Features (Backlog)
+
+**Purpose**: Capture MUST-level requirements that are blocked by missing backend endpoints but documented as deferred in `spec.md` ("Features Not Supported by Current API").
+
+- [ ] T072 [US4][BLOCKED] Implement revoke access for shared chats (FR-005) once API exposes a remove-owner endpoint (e.g., DELETE /api/chats/{id}/owners/{userId})
+- [ ] T073 [US4][BLOCKED] Implement search by message content (FR-007) once backend provides message-content search API (e.g., GET /api/chats/search?text=...)
+- [ ] T074 [US4][BLOCKED] Implement persistence for pinned chats and folders (FR-008) once chat model supports pin/folder fields in API
+- [ ] T075 [US4][BLOCKED] Implement chat rename support (FR-009) via PATCH /api/chats or equivalent endpoint
+- [ ] T076 [US6][BLOCKED] Implement full documents list view (FR-014) backed by GET /api/documents or equivalent endpoint
+
+**Note**: Do not start Phase 11 tasks until backend API is extended accordingly; see `spec.md` section "Features Not Supported by Current API (Deferred)" for rationale.
 
 ## Dependencies & Execution Order
 
@@ -208,6 +230,7 @@
 - **Phase 2 (Foundational)**: Depends on Phase 1 — BLOCKS all user stories
 - **Phase 3+ (User Stories)**: All depend on Phase 2
 - **Phase 10 (Polish)**: Depends on all desired user stories
+- **Phase 11 (Deferred/API-dependent)**: Optional backlog; blocked on backend changes described in `spec.md` ("Features Not Supported by Current API (Deferred)")
 
 ### User Story Dependencies
 

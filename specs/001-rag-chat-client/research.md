@@ -134,6 +134,45 @@ All chosen dependencies are safe and free for commercial use.
 
 ---
 
+## 6. Container Runtime for the Client (Node vs Alternatives)
+
+### Decision (Current)
+
+**Use Node.js 20 (alpine) as both build and runtime inside Docker** for the frontend SPA.
+
+- Local developers run the app exclusively via Docker (no Node/npm required on host).
+- Dev runtime: Vite dev-server inside container, started with `npm run dev -- --host 0.0.0.0 --port 61413`.
+- Future production runtime: Node-based static server (e.g., `serve` or small Express/Koa wrapper) in a separate runtime stage.
+
+### Rationale
+
+- **Alignment with toolchain**: Vite + React + TypeScript already use Node-based toolchain; using the same runtime inside the container keeps dev/CI/prod consistent.
+- **Symmetry across environments**: Dev, CI and prod can use the same base Node 20 (alpine) image with minimal differences in commands (`dev` vs `build`/`preview`).
+- **Simplicity**: Single runtime (Node) is easier for a small team than introducing an additional nginx/caddy layer at this stage.
+
+### Alternatives Considered
+
+1. **Nginx (multi-stage: Node builder + nginx:alpine runtime)**  
+   - **Pros**: Lightweight image, mature HTTP server, great for static SPA (gzip/brotli, HTTP/2, caching), common production standard.  
+   - **Cons**: Requires nginx config (SPA routes, headers, caching), adds another technology to maintain. Overkill for early-stage local-only deployment.
+
+2. **Caddy**  
+   - **Pros**: Simple configuration, good defaults, automatic HTTPS in many production scenarios.  
+   - **Cons**: Less familiar in typical .NET/Node stacks versus nginx; adds yet another server/runtime to learn.
+
+3. **Static hosting-only images (e.g. `nginx-unprivileged`, `caddy` with read-only volume)**  
+   - Well-suited for production once the SPA and build pipeline are stable.  
+   - Less convenient for local development without npm on host (every change requires rebuild + restart instead of hot reload via Vite dev-server).
+
+### Fit for Current Implementation
+
+- **Currently**: There is no full source implementation under `src/` yet, but infrastructure (Vite, TypeScript, ESLint) is already Node-centric. Running Vite in a Node-based container is the most natural and lowest-risk approach.  
+- **Future**:  
+  - Once a stable production build and performance/caching requirements exist, we can add a multi-stage Dockerfile: Node (build) → nginx/caddy (serve).  
+  - This change affects only the container runtime layer; client code and API contracts remain the same.
+
+---
+
 ## Summary Table
 
 | Concern | Decision | Key Point |
@@ -143,3 +182,4 @@ All chosen dependencies are safe and free for commercial use.
 | Auth/token | Custom TokenManager | Constitution: memory + HttpOnly |
 | Security | All MIT/Apache-2.0 | npm audit; no token storage violations |
 | Restrained colors | CSS variables | Muted palette in theme |
+| Container runtime | Node 20 in Docker | Simple now; room for nginx/caddy later |
