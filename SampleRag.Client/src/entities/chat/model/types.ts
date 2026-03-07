@@ -10,6 +10,14 @@ export type Message = {
 }
 
 /**
+ * Source (citation) — reference to a document and page from RAG response.
+ */
+export type Source = {
+  documentId: string
+  pageNumber: number
+}
+
+/**
  * Chat — conversation with a scope and owners.
  * API path: GET/POST /api/chats, GET /api/chats/{id}
  */

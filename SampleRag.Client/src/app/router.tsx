@@ -1,9 +1,10 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { AppLayout } from './layout'
 import { PlaceholderPage } from './placeholder'
 import { ChatPage } from '../pages/chat/ui/chat-page'
+import { ChatsIndexGate } from '../pages/chat/ui/chats-index-gate'
 
 const router = createBrowserRouter([
   {
@@ -18,6 +19,20 @@ const router = createBrowserRouter([
   },
   {
     path: '/chat',
+    element: <Navigate to="/chats" replace />,
+  },
+  {
+    path: '/chats',
+    element: (
+      <PageTransition>
+        <AppLayout>
+          <ChatsIndexGate />
+        </AppLayout>
+      </PageTransition>
+    ),
+  },
+  {
+    path: '/chats/:chatId',
     element: (
       <PageTransition>
         <AppLayout>

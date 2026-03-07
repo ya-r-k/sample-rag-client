@@ -86,12 +86,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T029 [US2] Implement GET /api/chats (batchSize, lastUsedIndex) in `src/shared/api/chats.ts`
-- [ ] T030 [US2] Implement GET /api/chats/{id} in `src/shared/api/chats.ts`
-- [ ] T031 [US2] Create chat list item component in `src/widgets/chat-sidebar/ui/chat-list-item.tsx`
-- [ ] T032 [US2] Create chat sidebar with list of chats in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
-- [ ] T033 [US2] Add chat history fetching: GET /api/chats/{id} returns chat; if response includes `messages` array (see contracts), display it; else accumulate messages from POST /api/messages responses cached in TanStack Query
-- [ ] T034 [US2] Integrate chat sidebar into chat page layout; select chat loads messages
+- [x] T029 [US2] Implement GET /api/chats (batchSize, lastUsedIndex) in `src/shared/api/chats.ts`
+- [x] T030 [US2] Implement GET /api/chats/{id} in `src/shared/api/chats.ts`
+- [x] T031 [US2] Create chat list item component in `src/widgets/chat-sidebar/ui/chat-list-item.tsx`
+- [x] T032 [US2] Create chat sidebar with list of chats in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
+- [x] T033 [US2] Add chat history fetching: GET /api/chats/{id} returns chat; if response includes `messages` array (see contracts), display it; else accumulate messages from POST /api/messages responses cached in TanStack Query
+- [x] T034 [US2] Integrate chat sidebar into chat page layout; select chat loads messages
 
 **Checkpoint**: User Stories 1 and 2 work — chat list and history visible
 
@@ -105,10 +105,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Create empty-state chat page (query input centered, no sidebar) in `src/pages/chat/ui/empty-chat-page.tsx`
-- [ ] T036 [US3] On POST /api/messages with scopeId+text, redirect to /chats/{chatId} when response includes chat
-- [ ] T037 [US3] Display placeholder "New chat" until API returns chat title (UX-008)
-- [ ] T038 [US3] Route logic: show empty-chat-page when no chats; show chat-page when chat selected or after first message
+- [x] T035 [US3] Create empty-state chat page (query input centered, no sidebar) in `src/pages/chat/ui/empty-chat-page.tsx`
+- [x] T036 [US3] On POST /api/messages with scopeId+text, redirect to /chats/{chatId} when response includes chat
+- [x] T037 [US3] Display placeholder "New chat" until API returns chat title (UX-008)
+- [x] T038 [US3] Route logic: show empty-chat-page when no chats; show chat-page when chat selected or after first message
 
 **Checkpoint**: First-message flow works for new users
 
