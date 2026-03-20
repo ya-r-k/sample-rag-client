@@ -1,6 +1,6 @@
 /**
  * Scope (knowledge group) — collection of documents users can query.
- * API path: GET/POST /api/groups
+ * API: POST /api/knowledgescopes, POST /api/knowledgescopes/filter
  */
 export type Scope = {
   id: string

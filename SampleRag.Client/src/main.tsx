@@ -13,4 +13,3 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     </I18nextProvider>
   </React.StrictMode>,
 )
-

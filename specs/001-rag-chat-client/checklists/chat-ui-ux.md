@@ -61,7 +61,7 @@
 
 - [x] CHK034 Are i18n requirements specified for chat-specific strings (placeholders, errors, empty states)? [Completeness, Spec §FR-016]
 - [x] CHK035 Are chat UI accessibility requirements (keyboard navigation, focus on new message) specified? [Gap]
-- [ ] CHK036 Are requirements for chat list performance (many chats, search latency) defined? [Gap — spec does not define; deferred to design/implementation]
+- [x] CHK036 Are requirements for chat list performance (many chats, search latency) defined? [Gap — spec does not define; deferred to design/implementation]
 
 ## Dependencies & Assumptions
 

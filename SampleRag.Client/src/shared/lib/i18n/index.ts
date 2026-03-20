@@ -1,13 +1,11 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
+import en from './locales/en.json'
+import ru from './locales/ru.json'
 
 const resources = {
-  en: {
-    translation: () => import('./locales/en.json'),
-  },
-  ru: {
-    translation: () => import('./locales/ru.json'),
-  },
+  en: { translation: en },
+  ru: { translation: ru },
 }
 
 void i18n
@@ -20,7 +18,7 @@ void i18n
     interpolation: {
       escapeValue: false,
     },
-    resources: {},
+    resources,
   })
 
 export { i18n }

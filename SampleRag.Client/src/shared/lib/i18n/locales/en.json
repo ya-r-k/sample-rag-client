@@ -1,4 +1,33 @@
 {
-  "appName": "RAG Chat"
+  "appName": "RAG Chat",
+  "nav": {
+    "chats": "Chats",
+    "documents": "Documents",
+    "scopes": "Knowledge scopes"
+  },
+  "userMenu": {
+    "placeholder": "User"
+  },
+  "footer": {
+    "appName": "RAG Chat",
+    "rights": "All rights reserved",
+    "version": "Version {{version}}"
+  },
+  "main": {
+    "title": "Welcome to RAG Chat",
+    "subtitle": "Ask questions over your documents and manage scopes in one place.",
+    "cards": {
+      "chat": {
+        "title": "Chat",
+        "description": "Start a new conversation or continue where you left off.",
+        "action": "Go to chats"
+      },
+      "documents": {
+        "title": "Documents",
+        "description": "Create scopes and upload PDFs for retrieval.",
+        "action": "Manage documents"
+      }
+    }
+  }
 }
 

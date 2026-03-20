@@ -23,7 +23,7 @@ cd SampleRag.Client
 docker build -t sample-rag-client .
 
 # 3. Запустить контейнер с пробросом порта Vite (см. vite.config.ts)
-docker run --rm -p 61413:61413 sample-rag-client
+docker run --rm -p 5274:5274 sample-rag-client
 ```
 
 ---
@@ -113,7 +113,7 @@ See [contracts/openapi.yaml](./contracts/openapi.yaml) for full specification (a
 
 ```bash
 # Dev-сервер (по умолчанию CMD в Dockerfile)
-docker run --rm -p 61413:61413 sample-rag-client
+docker run --rm -p 5274:5274 sample-rag-client
 
 # Production build
 docker run --rm sample-rag-client npm run build

@@ -18,7 +18,9 @@ Vite v6+ as bundler; TypeScript 5.8+ mandatory. ESLint v9+ with @typescript-esli
 
 ### II. Authentication
 
-Access token (5–15 minutes TTL) MUST be stored in memory via closure variable or Zustand — never useState, localStorage, or sessionStorage. Refresh token (24 hours TTL) exclusively in HttpOnly cookie with Secure and SameSite=Strict flags. TokenManager MUST implement automatic silent refresh on 401 errors and refresh token rotation.
+Access token (JWT) MUST be stored in memory via closure variable or Zustand — never useState, localStorage, or sessionStorage.  
+For the current demo implementation, the JWT is obtained directly from the API via `/api/auth/login` and passed to the backend in the `Authorization: Bearer <token>` header.  
+The design MUST remain ready to be reconfigured later to use an external OIDC provider without changing the rest of the application.
 
 ### III. API & Network
 

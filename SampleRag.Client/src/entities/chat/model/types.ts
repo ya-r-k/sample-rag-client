@@ -19,7 +19,7 @@ export type Source = {
 
 /**
  * Chat — conversation with a scope and owners.
- * API path: GET/POST /api/chats, GET /api/chats/{id}
+ * API: POST /api/chats, POST /api/chats/filter (no GET by id); DTO uses "name", mapped to title in UI.
  */
 export type Chat = {
   id: string

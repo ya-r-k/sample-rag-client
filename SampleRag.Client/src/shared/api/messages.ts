@@ -1,8 +1,9 @@
 /**
- * DTOs for POST /api/messages (aligned with openapi.yaml).
- * Shared layer does not import entities; use these types or map in features/pages.
+ * Messages API — aligned with Demo RAG API spec.
+ * SendMessageRequest: { chatId, text }. Use chatId "00000000-0000-0000-0000-000000000000" for "create chat and send".
  */
 import { authorizedFetch } from './token-manager'
+import { apiPost } from './client'
 
 export type MessageDto = {
   id?: string
@@ -13,7 +14,7 @@ export type MessageDto = {
 
 export type ChatDto = {
   id: string
-  title: string
+  name: string
   scopeId: string
   ownerIds: string[]
 }
@@ -23,9 +24,14 @@ export type SourceDto = {
   pageNumber: number
 }
 
-export type SendMessageRequestBody =
-  | { scopeId: string; text: string }
-  | { chatId: string; text: string }
+/** SendMessageRequest — empty guid for new chat (service may create chat and stream first). */
+export type SendMessageRequestBody = {
+  chatId: string
+  text: string
+}
+
+/** Empty guid: use when starting a new chat so the service creates the chat. */
+export const NEW_CHAT_ID = '00000000-0000-0000-0000-000000000000'
 
 export type SendMessageResponse = {
   message: MessageDto
@@ -34,9 +40,16 @@ export type SendMessageResponse = {
   sources: SourceDto[]
 }
 
+/** GetMessagesByModel for POST /messages/filter. */
+export type GetMessagesByModel = {
+  lastId?: string
+  batchSize?: number
+  chatId?: string
+}
+
 /**
- * Sends a message (new chat with scopeId+text or existing chat with chatId+text).
- * Handles both 201 JSON and SSE stream responses; returns normalized result.
+ * POST /api/messages — send message. Returns stream (SSE) or 201 JSON.
+ * When chatId is empty guid, service may create a new chat and stream it first.
  */
 export async function sendMessage(
   body: SendMessageRequestBody,
@@ -61,8 +74,16 @@ export async function sendMessage(
 }
 
 /**
+ * POST /api/messages/filter — list/filter messages.
+ */
+export async function getMessagesFilter(
+  body: GetMessagesByModel,
+): Promise<MessageDto[]> {
+  return apiPost<GetMessagesByModel, MessageDto[]>('/messages/filter', body)
+}
+
+/**
  * Parses SSE stream into a single SendMessageResponse.
- * Accumulates "text" events into answer; expects final "message" or JSON event with message, chat?, sources.
  */
 async function parseSSEResponse(response: Response): Promise<SendMessageResponse> {
   const reader = response.body?.getReader()

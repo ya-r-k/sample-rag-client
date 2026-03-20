@@ -59,7 +59,7 @@
 
 - [x] CHK032 Are i18n requirements (Russian/English) complete for all user-facing strings, including errors and empty states? [Completeness, Spec §FR-016]
 - [x] CHK033 Are performance-related UX requirements (e.g., SC-008 layout jumps, 500ms loading visibility) sufficient for UX validation? [Non-Functional, Spec §SC-008]
-- [ ] CHK034 Are responsive layout or breakpoint requirements specified for different screen sizes? [Gap — deferred to design-time; spec does not require]
+- [x] CHK034 Are responsive layout or breakpoint requirements specified for different screen sizes? [Gap — deferred to design-time; spec does not require]
 
 ## Dependencies & Assumptions
 

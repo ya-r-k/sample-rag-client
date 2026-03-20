@@ -120,11 +120,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T039 [US4] Implement POST /api/chats/{id}/owners in `src/shared/api/chats.ts`
-- [ ] T040 [US4] Implement DELETE /api/chats/{id} in `src/shared/api/chats.ts`
-- [ ] T041 [US4] Create share chat feature (enter userId/username/email, call add-owners) in `src/features/share-chat/`
-- [ ] T042 [US4] Create delete chat action in chat header/sidebar; confirm before delete
-- [ ] T043 [US4] Client-side search: filter chat list by title (FR-006, client-side only per API Alignment)
+- [x] T039 [US4] Implement POST /api/chats/{id}/owners in `src/shared/api/chats.ts`
+- [x] T040 [US4] Implement DELETE /api/chats/{id} in `src/shared/api/chats.ts`
+- [x] T041 [US4] Create share chat feature (enter userId/username/email, call add-owners) in `src/features/share-chat/`
+- [x] T042 [US4] Create delete chat action in chat header/sidebar; confirm before delete
+- [x] T043 [US4] Client-side search: filter chat list by title (FR-006, client-side only per API Alignment)
 
 **Checkpoint**: Share and delete work; search is client-side filter
 
@@ -139,8 +139,8 @@
 ### Implementation for User Story 5
 
 - [ ] T044 [US5] Determine document availability: if API provides scope document count, use it; else infer from empty RAG response or add GET /api/groups/{id} with count
-- [ ] T045 [US5] Create unavailable message component (UX-006) in `src/features/ask-question/ui/chat-unavailable.tsx`
-- [ ] T046 [US5] Disable query input when no documents; show unavailable message
+- [x] T045 [US5] Create unavailable message component (UX-006) in `src/features/ask-question/ui/chat-unavailable.tsx`
+- [x] T046 [US5] Disable query input when no documents; show unavailable message
 - [ ] T047 [US5] Show unavailable per-scope when scope has no documents (if API supports)
 
 **Checkpoint**: Unavailable state clearly indicated
@@ -155,14 +155,17 @@
 
 ### Implementation for User Story 6
 
-- [ ] T048 [US6] Implement POST /api/groups in `src/shared/api/groups.ts`
-- [ ] T049 [US6] Implement POST /api/documents (scopeId + multipart file) in `src/shared/api/documents.ts`
-- [ ] T050 [US6] Create document upload with react-dropzone (accept PDF, maxSize 20MB, onDropRejected) in `src/features/upload-document/ui/document-upload.tsx`
+- [x] T048 [US6] Implement POST /api/groups in `src/shared/api/groups.ts`
+- [x] T049 [US6] Implement POST /api/documents (scopeId + multipart file) in `src/shared/api/documents.ts`
+- [x] T050 [US6] Create document upload with react-dropzone (accept PDF, maxSize 20MB, onDropRejected) in `src/features/upload-document/ui/document-upload.tsx`
 - [ ] T051 [US6] Add invalid file feedback (UX-010) before any server request
-- [ ] T052 [US6] Create scope creation form in `src/features/upload-document/ui/create-scope-form.tsx`
-- [ ] T053 [US6] Create documents admin page (create scope, upload) in `src/pages/documents/ui/documents-page.tsx`
+- [x] T052 [US6] Create scope creation form in `src/features/upload-document/ui/create-scope-form.tsx`
+- [x] T053 [US6] Create documents admin page (create scope, upload) in `src/pages/documents/ui/documents-page.tsx`
 - [ ] T054 [US6] Gate documents page by role (admin only); hide from regular users (FR-017, User Story 6 AC6)
-- [ ] T055 [US6] Document list: API has no GET /documents; show uploaded docs from local state or defer; add note in UI if empty
+- [x] T055 [US6] Document list: implement GET /api/documents (limit, offset) with re-index and delete actions in `src/shared/api/documents.ts` and show first page (10 items) with name, link, and actions in `src/pages/documents/ui/documents-page.tsx`
+
+- [x] T077 [US6] Add modal-based document upload flow on Documents page with "Upload document" button opening a modal that hosts the upload form and re-index description.
+- [x] T078 [US6] Add pagination controls (Previous/Next, 10 items per page) for documents list in `src/pages/documents/ui/documents-page.tsx`.
 
 **Checkpoint**: Admin can create scopes and upload PDFs
 
@@ -176,17 +179,26 @@
 
 ### Implementation for User Story 7
 
-- [ ] T056 [US7] Create main page with navigation links in `src/pages/main/ui/main-page.tsx`
-- [ ] T057 [US7] Add header with nav links, user menu, language selector (UX-014) in `src/widgets/header/ui/header.tsx`
-- [ ] T058 [US7] Add footer with copyright, version (UX-015) in `src/widgets/footer/ui/footer.tsx`
-- [ ] T059 [US7] Add i18n translations for ru/en (all user-facing strings per UX-012) in `src/shared/lib/i18n/locales/`
-- [ ] T060 [US7] Apply Framer Motion AnimatePresence for page transitions (UX-013)
-- [ ] T061 [US7] Ensure loading spinners for all async operations (FR-019)
+- [x] T056 [US7] Create main page with navigation links in `src/pages/main/ui/main-page.tsx`
+- [x] T057 [US7] Add header with nav links, user menu, language selector (UX-014) in `src/widgets/header/ui/header.tsx`
+- [x] T058 [US7] Add footer with copyright, version (UX-015) in `src/widgets/footer/ui/footer.tsx`
+- [x] T059 [US7] Add i18n translations for ru/en (all user-facing strings per UX-012) in `src/shared/lib/i18n/locales/`
+- [x] T060 [US7] Apply Framer Motion AnimatePresence for page transitions (UX-013)
+- [x] T061 [US7] Ensure loading spinners for all async operations (FR-019)
 - [ ] T062 [US7] Apply restrained color palette via CSS variables (research.md)
-- [ ] T063 [US7] Add keyboard focus states (UX-011)
+- [x] T063 [US7] Add keyboard focus states (UX-011)
 
-- [ ] T068 [US4] Add empty state UI when chat name search returns no results (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
-- [ ] T069 [US4] Add empty state UI for empty chat folders (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
+- [x] T079 [US7] Update header navigation to include Chats, Documents, and Knowledge scopes tabs wired to `/chats`, `/documents`, and `/scopes` in `src/widgets/header/ui/header.tsx` and `src/app/router.tsx`.
+
+---
+
+## Phase 9b: Knowledge Scopes Management (Extension of User Story 6)
+
+- [x] T080 [US6] Implement GET /api/groups (limit, offset) support in `src/shared/api/groups.ts` and use it for paginated scopes fetching.
+- [x] T081 [US6] Create scopes admin page with paginated list (10 per page) and inline card-based scope creation in `src/pages/scopes/ui/scopes-page.tsx`.
+
+- [x] T068 [US4] Add empty state UI when chat name search returns no results (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
+- [x] T069 [US4] Add empty state UI for empty chat folders (UX-009) in `src/widgets/chat-sidebar/ui/chat-sidebar.tsx`
 
 **Checkpoint**: Full navigation and UX polish
 
@@ -203,7 +215,7 @@
 - [ ] T066 Run quickstart validation: npm run dev, npm run build, npm run lint
     - Use Docker-based commands only (no local npm):
       - `docker build -t sample-rag-client ./SampleRag.Client`
-      - `docker run --rm -p 61413:61413 sample-rag-client` (dev)
+      - `docker run --rm -p 5274:5274 sample-rag-client` (dev)
       - `docker run --rm sample-rag-client npm run build`
       - `docker run --rm sample-rag-client npm run lint`
 - [ ] T067 Code cleanup: remove any `any`, ensure strict TypeScript

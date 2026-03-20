@@ -7,7 +7,7 @@
 
 ## Summary
 
-RAG chat client with AI-powered Q&A, document management, chat sharing, and admin document upload. React + TypeScript + Vite SPA consuming a local API. Chat UI built with shadcn/ui, Headless UI, Lucide React (constitution-mandated); file upload via react-dropzone; TokenManager for 401 handling and silent refresh via configurable external auth endpoint (access token in memory, refresh token in HttpOnly cookie). All dependencies MIT/Apache-2.0 for commercial use. Restrained color palette via CSS variables.
+RAG chat client with AI-powered Q&A, document management, chat sharing, and admin document/upload management. React + TypeScript + Vite SPA consuming a local API. Chat UI built with shadcn/ui, Headless UI, Lucide React (constitution-mandated); file upload via react-dropzone; TokenManager for 401 handling and silent refresh via configurable external auth endpoint (access token in memory, refresh token in HttpOnly cookie). The application exposes three primary navigation areas: Chats (Q&A experience with persistent history), Documents (admin document list with upload/re-index/delete), and Knowledge scopes (admin scopes list with inline creation). All dependencies MIT/Apache-2.0 for commercial use. Restrained color palette via CSS variables (to be applied in a follow-up polish phase).
 
 ## Technical Context
 
@@ -24,7 +24,7 @@ RAG chat client with AI-powered Q&A, document management, chat sharing, and admi
 ### Runtime & Containerization
 
 - **Local execution model**: Application MUST be started via Docker; host machine is not required to have Node.js or npm installed.
-- **Current runtime choice**: Node.js 20 (alpine) inside container; Vite dev-server runs as container entrypoint (`npm run dev -- --host 0.0.0.0 --port 61413`).
+- **Current runtime choice**: Node.js 20 (alpine) inside container; Vite dev-server runs as container entrypoint (`npm run dev -- --host 0.0.0.0 --port 5274`).
 - **Production-ready option (Node-based, compatible with current implementation)**:
   - Multi-stage Docker build: Stage 1 — Node builder (`npm install && npm run build`), Stage 2 — lightweight Node runtime serving static `dist/` via small HTTP server (e.g., `serve`).
   - This keeps single-runtime (Node) for both build and serve phases, matches current toolchain, и упрощает отладку.

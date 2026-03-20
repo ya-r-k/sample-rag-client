@@ -1,82 +1,115 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getGroups } from '../../../shared/api/groups'
+import { getGroups } from '../../../shared/api/scopes'
+import { createChat } from '../../../shared/api/chats'
 import { sendMessage } from '../../../shared/api/messages'
-import { ScopeSelector } from '../../../features/ask-question/ui/scope-selector'
+import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/chat-sidebar'
 import { QueryInput } from '../../../features/ask-question/ui/query-input'
+import { ChatUnavailable } from '../../../features/ask-question/ui/chat-unavailable'
+import { ScopeSelector } from '../../../features/ask-question/ui/scope-selector'
 import { cn } from '../../../shared/lib/cn'
 
 /**
  * Empty-state chat page when user has no chats yet.
- * Query input is primary focus (centered); on submit, redirects to new chat page.
+ * Creates chat via POST /chats then sends message; redirects to new chat page.
  */
 export function EmptyChatPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [scopeId, setScopeId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [hasDocuments] = useState(true)
 
   const { data: scopes = [], isLoading: scopesLoading } = useQuery({
     queryKey: ['groups'],
-    queryFn: getGroups,
+    queryFn: () => getGroups(),
   })
+
+  const scopeItems = useMemo(
+    () => scopes.map((s) => ({ id: s.id, name: s.name })),
+    [scopes],
+  )
+
+  const handleSelectChat = useCallback(
+    (id: string) => {
+      navigate(`/chats/${id}`)
+    },
+    [navigate],
+  )
 
   const handleSubmit = useCallback(
     async (text: string) => {
-      if (isSubmitting || !scopeId) return
+      if (isSubmitting || !scopeId || !hasDocuments) return
       setIsSubmitting(true)
       try {
-        const result = await sendMessage({ scopeId, text })
-        if (result.chat) {
-          queryClient.invalidateQueries({ queryKey: ['chats'] })
-          navigate(`/chats/${result.chat.id}`)
-        }
+        const newChat = await createChat({
+          name: 'New chat',
+          scopeId,
+        })
+        const result = await sendMessage({ chatId: newChat.id, text })
+        queryClient.invalidateQueries({ queryKey: ['chats'] })
+        navigate(`/chats/${result.chat?.id ?? newChat.id}`)
       } catch (err) {
         console.error('Send message failed:', err)
       } finally {
         setIsSubmitting(false)
       }
     },
-    [scopeId, isSubmitting, navigate, queryClient],
+    [scopeId, hasDocuments, isSubmitting, navigate, queryClient],
   )
 
-  const canSubmit = scopeId != null && scopes.length > 0 && !scopesLoading && !isSubmitting
+  const canSubmit =
+    scopeId != null &&
+    scopes.length > 0 &&
+    !scopesLoading &&
+    !isSubmitting &&
+    hasDocuments
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-4">
-      <div className="w-full max-w-xl space-y-4 text-center">
+    <div className="flex min-h-0 flex-1 gap-0">
+      <ChatSidebar
+        activeChatId={null}
+        onSelectChat={handleSelectChat}
+      />
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-4">
+        <div className="w-full max-w-xl space-y-4 text-center">
         <h1 className="text-xl font-semibold text-foreground">Ask a question</h1>
-        <p className="text-sm text-muted-foreground">
-          Choose a scope and enter your question to start a new chat.
-        </p>
-        <div className="rounded-lg border border-muted bg-muted/30 p-4">
-          <label className="mb-2 block text-left text-sm font-medium text-muted-foreground">
-            Scope
-          </label>
-          <ScopeSelector
-            scopes={scopes}
-            value={scopeId}
-            onChange={setScopeId}
-            disabled={scopesLoading}
-            placeholder={scopesLoading ? 'Loading...' : 'Select scope'}
-          />
+          <p className="text-sm text-muted-foreground">
+            Enter your question to start a new chat.
+          </p>
+          <div className="rounded-lg border border-muted bg-muted/30 p-4">
+          <div className="mt-2">
+            <label className="mb-1 block text-left text-xs font-medium text-muted-foreground">
+              Scope
+            </label>
+            <ScopeSelector
+              scopes={scopeItems}
+              value={scopeId}
+              onChange={(id) => setScopeId(id)}
+              placeholder={scopeItems.length ? 'Select scope' : 'No scopes yet'}
+            />
+          </div>
           <div className="mt-4">
             <QueryInput
               onSubmit={handleSubmit}
               disabled={!canSubmit || isSubmitting}
               placeholder={isSubmitting ? 'Sending...' : 'Ask a question...'}
             />
-          </div>
-          {isSubmitting && (
-            <div
-              className="mt-2 flex items-center justify-center gap-2 text-sm text-muted-foreground"
-              aria-busy="true"
-            >
-              <Spinner className="h-4 w-4" />
-              <span>Creating chat and getting answer...</span>
             </div>
-          )}
+            {!hasDocuments && (
+              <ChatUnavailable className="mt-3" />
+            )}
+            {isSubmitting && (
+              <div
+                className="mt-2 flex items-center justify-center gap-2 text-sm text-muted-foreground"
+                aria-busy="true"
+              >
+                <Spinner className="h-4 w-4" />
+                <span>Creating chat and getting answer...</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

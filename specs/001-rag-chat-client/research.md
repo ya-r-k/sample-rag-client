@@ -10,12 +10,13 @@
 
 ### Decision
 
-**Use shadcn/ui + custom components** — no third-party chat library.
+**Use shadcn/ui + custom components** — no third-party chat library. Layout follows a classic two-pane chat pattern: a fixed-width sidebar on the left and a main message panel on the right with a bottom-pinned input once a chat is opened, and a centered input when no chat is selected.
 
 ### Rationale
 
 - **Constitution mandate**: shadcn/ui is required for components; Headless UI for primitives.
 - **RAG-specific UX**: Chat is user question + assistant response + source citations. Generic chat libraries (MinChat, Stream) target real-time messaging and are tied to their backends or SaaS.
+- **Layout and ergonomics**: Keeping the chat list in a left-pinned sidebar with no gaps from the screen edge ensures that selecting a chat always shows the corresponding messages immediately in the right-hand panel, with the input anchored at the bottom. In the "no chats yet" state, centering the input in the right pane keeps the first question flow obvious and uncluttered.
 - **Extensibility**: Custom components with shadcn/ui give full control over message layout, citation links, and streaming display.
 - **License**: shadcn/ui is MIT; no extra licensing risk.
 
@@ -141,7 +142,7 @@ All chosen dependencies are safe and free for commercial use.
 **Use Node.js 20 (alpine) as both build and runtime inside Docker** for the frontend SPA.
 
 - Local developers run the app exclusively via Docker (no Node/npm required on host).
-- Dev runtime: Vite dev-server inside container, started with `npm run dev -- --host 0.0.0.0 --port 61413`.
+- Dev runtime: Vite dev-server inside container, started with `npm run dev -- --host 0.0.0.0 --port 5274`.
 - Future production runtime: Node-based static server (e.g., `serve` or small Express/Koa wrapper) in a separate runtime stage.
 
 ### Rationale
