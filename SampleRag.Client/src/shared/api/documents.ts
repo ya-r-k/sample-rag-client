@@ -4,18 +4,21 @@
  * List: POST /documents/filter with GetDocumentsByModel (no GET list).
  */
 import { apiPost, apiDelete } from './client'
+import { authorizedFetch } from './token-manager'
 
 export type DocumentDto = {
   id: string
   name: string
   localLink?: string
+  originalLink?: string
   scopeId: string
 }
 
 /** UploadDocumentRequestModel — API expects JSON with base64 file content. */
 export type UploadDocumentRequestModel = {
   name: string
-  scopeId: string
+  scopeId?: string
+  originalLink?: string
   file: {
     content: string
     fileName: string
@@ -66,7 +69,7 @@ function fileToBase64(file: File): Promise<string> {
  */
 export async function uploadDocument(
   body:
-    | { name?: string; scopeId: string; file: File }
+    | { name?: string; scopeId?: string; file: File }
     | UploadDocumentRequestModel,
 ): Promise<DocumentDto> {
   let payload: UploadDocumentRequestModel
@@ -77,6 +80,8 @@ export async function uploadDocument(
       scopeId: body.scopeId,
       file: { content, fileName: body.file.name },
     }
+
+    console.log('payload', payload)
   } else {
     payload = body as UploadDocumentRequestModel
   }
@@ -89,4 +94,18 @@ export async function uploadDocument(
 /** DELETE /api/documents/{id} — delete document by id. Returns 204. */
 export async function deleteDocument(id: string): Promise<void> {
   await apiDelete(`/api/documents/${encodeURIComponent(id)}`)
+}
+
+/** GET /api/files/... — download PDF and return as Blob for client-side viewer. */
+export async function getDocumentAssetBlob(localLink: string): Promise<Blob> {
+  const normalizedPath = localLink.replace(/\\/g, '/').replace(/^\/+/, '')
+  const response = await authorizedFetch(`/api/files/${normalizedPath}`, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`)
+  }
+
+  return response.blob()
 }

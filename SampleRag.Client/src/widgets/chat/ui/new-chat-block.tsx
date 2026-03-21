@@ -1,57 +1,25 @@
-import type { Source } from '../../../entities/chat/model/types'
-import { CitationLink } from '../../../entities/chat/ui/citation-link'
-import { ScrollArea } from '../../../shared/ui/scroll-area'
+import { QueryInput } from '../../../features/ask-question/ui/query-input'
 import { cn } from '../../../shared/lib/cn'
+import { useTranslation } from 'react-i18next'
 
-export type MessageItem = {
-  role: 'user' | 'assistant'
-  text: string
-  sources?: Source[]
-}
-
-type MessageListProps = {
-  messages: MessageItem[]
+type NewChatBlockProps = {
   className?: string
+  handleSubmit: (text: string) => void
+  canSubmit: boolean
+  isSubmitting: boolean
+  hasDocuments: boolean
 }
 
-export function MessageList({ messages, className }: MessageListProps) {
+export function NewChatBlock({ className, handleSubmit, canSubmit, isSubmitting, hasDocuments }: NewChatBlockProps) {
+  const { t } = useTranslation()
   return (
-    <ScrollArea className={cn('flex-1', className)}>
-      <ul className="flex flex-col gap-4 p-4">
-        {messages.map((msg, index) => (
-          <li
-            key={index}
-            className={cn(
-              'flex',
-              msg.role === 'user' ? 'justify-end' : 'justify-start',
-            )}
-          >
-            <div
-              className={cn(
-                'max-w-[85%] rounded-lg px-4 py-2 text-sm',
-                msg.role === 'user'
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-muted text-foreground',
-              )}
-            >
-              <p className="whitespace-pre-wrap">{msg.text}</p>
-              {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2 border-t border-muted pt-2">
-                  {msg.sources.map((source, i) => (
-                    <CitationLink
-                      key={`${source.documentId}-${source.pageNumber}-${i}`}
-                      source={source}
-                      className="text-xs text-sky-600 underline hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                    >
-                      [Source: p.{source.pageNumber}]
-                    </CitationLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </ScrollArea>
+    <div className={cn("flex flex-col items-center justify-center shrink-0 pt-3 h-full", className)}>
+      <h1 className="text-4xl text-center font-semibold text-foreground mb-10 flex w-full items-center justify-center pb-3 text-center">{t('chat.newChatTitle')}</h1>
+        <QueryInput
+          onSubmit={handleSubmit}
+          disabled={!canSubmit || isSubmitting || !hasDocuments}
+          placeholder={isSubmitting ? t('chat.placeholderSending') : t('chat.placeholderAsk')}
+        />
+    </div>
   )
 }

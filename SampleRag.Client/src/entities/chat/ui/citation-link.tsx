@@ -1,14 +1,14 @@
 import type { Source } from '../model/types'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
+import { i18n } from '../../../shared/lib/i18n'
+import type { DocumentDto } from '../../../shared/api/documents'
 
 /**
  * Builds URL for document download (citation link).
  * GET /api/files/assets/documents/{fileName}
  * Uses documentId as fileName when no explicit fileName is provided.
  */
-export function getDocumentAssetUrl(fileName: string, pageNumber?: number): string {
-  const base = `${API_BASE_URL}/files/assets/documents/${encodeURIComponent(fileName)}`
+export function getDocumentAssetUrl(localLink: string, name: string, pageNumber?: number): string {
+  const base = `/documents/view?path=${encodeURIComponent(localLink)}&name=${encodeURIComponent(name)}`
   if (pageNumber != null && pageNumber > 0) {
     return `${base}?page=${pageNumber}`
   }
@@ -19,22 +19,26 @@ type CitationLinkProps = {
   source: Source
   /** When API provides document name/fileName, use it for the URL; otherwise documentId is used */
   fileName?: string
+  /** Loaded document metadata — used for label and better file path when available */
+  document?: Pick<DocumentDto, 'id' | 'name' | 'localLink'>
   className?: string
   children?: React.ReactNode
 }
 
-/**
- * Renders a link that opens the document at the cited page in a new tab.
- */
-export function CitationLink({ source, fileName, className, children }: CitationLinkProps) {
-  const url = getDocumentAssetUrl(fileName ?? source.documentId, source.pageNumber)
-  const label = children ?? `Document, page ${source.pageNumber}`
+export function CitationLink({ source, document: doc, className, children }: CitationLinkProps) {
+  const url = getDocumentAssetUrl(doc?.localLink ?? '', doc?.name ?? '', source.pageNumber)                          
+
+  const label =
+    children ??
+    (doc?.name
+      ? i18n.t('chat.sourceWithDocName', { name: doc.name, page: source.pageNumber })
+      : i18n.t('chat.sourcePage', { page: source.pageNumber }))
 
   return (
     <a
       href={url}
       target="_blank"
-      rel="noopener noreferrer"
+      rel="noreferrer"
       className={className}
     >
       {label}

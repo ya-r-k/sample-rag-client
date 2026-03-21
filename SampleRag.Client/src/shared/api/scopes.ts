@@ -37,17 +37,18 @@ export async function getScopes(params?: ListScopesParams): Promise<ScopeDto[]> 
   return apiPost<typeof body, ScopeDto[]>('/api/knowledgescopes/filter', body)
 }
 
-/** GET /api/groups — backward-compat alias; prefer getScopes. */
-export async function getGroups(params?: ListScopesParams): Promise<ScopeDto[]> {
-  return getScopes(params)
-}
-
 /** POST /api/knowledgescopes — create scope(s). Body: single or array. Returns 201 + created scope(s). */
-export async function createScope(body: CreateScopeRequest): Promise<ScopeDto> {
-  const result = await apiPost<CreateScopeRequest, ScopeDto | ScopeDto[]>(
+export async function createScope(body: CreateScopeRequest[]): Promise<ScopeDto> {
+  console.log('body', body)
+  
+  const result = await apiPost<CreateScopeRequest[], ScopeDto[] | ScopeDto[]>(
     '/api/knowledgescopes',
     body,
   )
+
+  
+  console.log('result', result)
+
   return Array.isArray(result) ? result[0] : result
 }
 

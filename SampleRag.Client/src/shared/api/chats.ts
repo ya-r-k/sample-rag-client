@@ -3,6 +3,7 @@
  * List: POST /api/chats/filter (no GET list). No GET /api/chats/{id}; get chat from list or sendMessage response.
  */
 import { apiPost, apiDelete } from './client'
+import { SourceDto } from './messages'
 
 export type ChatDto = {
   id: string
@@ -15,7 +16,9 @@ export type MessageDto = {
   id?: string
   chatId?: string
   text: string
-  createdAt?: string
+  createdAt?: string,
+  aiGenerated?: boolean,
+  sourceReferences?: SourceDto[],
 }
 
 /** GetChatsByModel — extends GetBatchByModel with optional scopeId. */
@@ -46,6 +49,7 @@ export async function getChats(params?: ListChatsParams): Promise<ChatDto[]> {
     batchSize: params?.batchSize,
     scopeId: params?.scopeId,
   }
+
   return apiPost<typeof body, ChatDto[]>('/api/chats/filter', body)
 }
 

@@ -1,55 +1,84 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getGroups } from '../../../shared/api/scopes'
-import { deleteChat, getChats, createChat } from '../../../shared/api/chats'
-import { sendMessage, NEW_CHAT_ID } from '../../../shared/api/messages'
-import { QueryInput } from '../../../features/ask-question/ui/query-input'
-import { ChatUnavailable } from '../../../features/ask-question/ui/chat-unavailable'
-import { MessageList, type MessageItem } from '../../../widgets/chat/ui/message-list'
+import { getScopes } from '../../../shared/api/scopes'
+import { deleteChat, getChats, type ChatDto } from '../../../shared/api/chats'
+import {
+  sendMessage,
+  getMessagesFilter,
+  type MessageDto,
+  type SourceDto,
+} from '../../../shared/api/messages'
+import { getDocumentsByIds, type DocumentDto } from '../../../shared/api/documents'
 import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/chat-sidebar'
-import { ShareChatForm } from '../../../features/share-chat/ui/share-chat-form'
-import { cn } from '../../../shared/lib/cn'
+import { ChatHeading } from '../../../widgets/chat/ui/chat-heading'
+import { Spinner } from '../../../shared/ui/spinner'
+import { NewChatBlock } from '../../../widgets/chat/ui/new-chat-block'
+import { CreatedChatInteractionView } from '../../../widgets/chat/ui/created-chat-interaction-view'
+import { useTranslation } from 'react-i18next'
 
 export function ChatPage() {
-  const { chatId: routeChatId } = useParams<{ chatId?: string }>()
+  const { t } = useTranslation()
+  const { chatId } = useParams<{ chatId?: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const chatId = routeChatId ?? null
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [hasDocuments] = useState(true)
+  /** Optimistic thread on /chats before the server returns chat id */
+  const [draftMessages, setDraftMessages] = useState<MessageDto[] | null>(null)
+
+  useEffect(() => {
+    if (chatId) {
+      setDraftMessages(null)
+    }
+  }, [chatId])
 
   const { data: scopes = [], isLoading: scopesLoading } = useQuery({
     queryKey: ['groups'],
-    queryFn: () => getGroups(),
+    queryFn: () => getScopes(),
   })
 
-  const { data: chats = [] } = useQuery({
-    queryKey: ['chats'],
-    queryFn: () => getChats(),
+  const { data: chats = [], isLoading: chatsLoading } = useQuery({
+    queryKey: ['chats', 20],
+    queryFn: () => getChats({ batchSize: 20 }),
   })
   const chatData = useMemo(
     () => (chatId ? chats.find((c) => c.id === chatId) : null),
     [chats, chatId],
   )
 
-  const cachedMessages = useQuery({
+  const { data: messages = [] } = useQuery({
     queryKey: ['chat-messages', chatId],
-    queryFn: () =>
-      Promise.resolve(
-        (queryClient.getQueryData<MessageItem[]>(['chat-messages', chatId]) ?? []) as MessageItem[],
-      ),
-    enabled: !!chatId,
-    initialData: () =>
-      (queryClient.getQueryData<MessageItem[]>(['chat-messages', chatId]) ?? []) as MessageItem[],
+    queryFn: () => getMessagesFilter({ chatId: chatId ?? undefined, batchSize: 30 }),
+    // While sending, rely on cache updates from streaming / optimistic updates (avoid overwriting with a stale filter).
+    enabled: !!chatId && !isSubmitting,
   })
 
-  const messages: MessageItem[] = useMemo(() => {
-    if (!chatId) return []
-    return cachedMessages.data ?? []
-  }, [chatId, cachedMessages.data])
+  const displayMessages: MessageDto[] = chatId ? messages : (draftMessages ?? [])
+
+  const documentIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const m of displayMessages) {
+      for (const s of m.sourceReferences ?? []) {
+        if (s.documentId) set.add(s.documentId)
+      }
+    }
+    return [...set].sort()
+  }, [displayMessages])
+
+  const { data: loadedDocuments = [] } = useQuery({
+    queryKey: ['chat-documents-by-ids', documentIds.join('|')],
+    queryFn: () => getDocumentsByIds(documentIds),
+    enabled: documentIds.length > 0,
+    staleTime: 60_000,
+  })
+
+  const documentsById = useMemo(
+    () => Object.fromEntries(loadedDocuments.map((d: DocumentDto) => [d.id, d])),
+    [loadedDocuments],
+  )
 
   const handleSelectChat = useCallback(
     (id: string) => {
@@ -64,57 +93,143 @@ export function ChatPage() {
       if (!hasDocuments && !chatId) return
 
       setIsSubmitting(true)
-      try {
-        const effectiveScopeId =
-          chatId != null ? undefined : scopes[0]?.id
+      let streamedChatId = chatId
+      const userItem: MessageDto = { text, aiGenerated: false }
+      const assistantItem: MessageDto = { text: '', aiGenerated: true, sourceReferences: [] }
 
-        if (!chatId && !effectiveScopeId) {
-          return
-        }
-
-        let effectiveChatId = chatId
-        if (!effectiveChatId && effectiveScopeId) {
-          const newChat = await createChat({
-            name: 'New chat',
-            scopeId: effectiveScopeId,
-          })
-          effectiveChatId = newChat.id
-        }
-        const result = await sendMessage({
-          chatId: effectiveChatId ?? NEW_CHAT_ID,
-          text,
+      const upsertChatInSidebar = (chat: ChatDto) => {
+        queryClient.setQueryData<ChatDto[]>(['chats', 20], (prev) => {
+          const next = prev ? [...prev] : []
+          const existingIndex = next.findIndex((item) => item.id === chat.id)
+          if (existingIndex >= 0) {
+            next[existingIndex] = chat
+            return next
+          }
+          return [chat, ...next]
         })
+      }
 
-        const userItem: MessageItem = { role: 'user', text }
-        const assistantItem: MessageItem = {
-          role: 'assistant',
-          text: result.answer,
-          sources: result.sources,
+      const ensureAssistantMessage = (items: MessageDto[], targetChatId: string) => {
+        const next = [...items]
+        if (next.length === 0) {
+          next.push({ ...userItem, chatId: targetChatId })
         }
+        const assistantIndex = next.findIndex((item) => item.aiGenerated === true && !item.id)
+        if (assistantIndex >= 0) {
+          return { next, assistantIndex }
+        }
+        next.push({ ...assistantItem, chatId: targetChatId })
+        return { next, assistantIndex: next.length - 1 }
+      }
 
-        const newChatId = result.chat?.id ?? effectiveChatId ?? chatId
-        if (newChatId) {
-          queryClient.setQueryData<MessageItem[]>(['chat-messages', newChatId], (prev) => [
+      if (!chatId) {
+        setDraftMessages([
+          { ...userItem },
+          { ...assistantItem },
+        ])
+      }
+
+      try {
+        if (chatId) {
+          queryClient.setQueryData<MessageDto[]>(['chat-messages', chatId], (prev) => [
             ...(prev ?? []),
-            userItem,
-            assistantItem,
+            { ...userItem, chatId },
+            { ...assistantItem, chatId },
           ])
-          queryClient.invalidateQueries({ queryKey: ['chat', newChatId] })
         }
 
-        if (result.chat && !chatId) {
-          queryClient.invalidateQueries({ queryKey: ['chats'] })
-          navigate(`/chats/${result.chat.id}`)
-        } else if (effectiveChatId && !chatId) {
-          navigate(`/chats/${effectiveChatId}`)
+        const result = await sendMessage(
+          {
+            chatId: chatId ?? undefined,
+            text,
+          },
+          {
+            onEvent: (event) => {
+              if (event.chat) {
+                const eventChatId = event.chat.id
+                streamedChatId = eventChatId
+                upsertChatInSidebar(event.chat)
+
+                queryClient.setQueryData<MessageDto[]>(['chat-messages', eventChatId], (prev) => {
+                  const base = prev ?? []
+                  if (base.length > 0) {
+                    return base
+                  }
+                  return [
+                    { ...userItem, chatId: eventChatId },
+                    { ...assistantItem, chatId: eventChatId },
+                  ]
+                })
+
+                if (!chatId) {
+                  navigate(`/chats/${eventChatId}`, { replace: true })
+                }
+              }
+
+              const targetChatId = streamedChatId ?? chatId
+              if (!targetChatId || (!event.textDelta && !event.sources && !event.message)) {
+                return
+              }
+
+              queryClient.setQueryData<MessageDto[]>(['chat-messages', targetChatId], (prev) => {
+                const { next, assistantIndex } = ensureAssistantMessage(prev ?? [], targetChatId)
+                const currentAssistant = next[assistantIndex]
+                const currentText = currentAssistant.text ?? ''
+                const nextTextFromMessage = event.message?.text ?? currentText
+                const mergedText = event.textDelta ? `${currentText}${event.textDelta}` : nextTextFromMessage
+
+                next[assistantIndex] = {
+                  ...currentAssistant,
+                  ...(event.message ?? {}),
+                  chatId: targetChatId,
+                  aiGenerated: true,
+                  text: mergedText,
+                  sourceReferences: event.message?.sourceReferences,
+                }
+                return next
+              })
+            },
+          },
+        )
+
+        const resolvedChatId = result.chat?.id ?? streamedChatId
+        if (result.chat) {
+          upsertChatInSidebar(result.chat)
+        }
+        if (!chatId && result.chat?.id) {
+          navigate(`/chats/${result.chat.id}`, { replace: true })
+        }
+        if (resolvedChatId) {
+          queryClient.setQueryData<MessageDto[]>(['chat-messages', resolvedChatId], (prev) => {
+            const { next, assistantIndex } = ensureAssistantMessage(prev ?? [], resolvedChatId)
+            const mergedRefs =
+              result.sources?.length
+                ? result.sources
+                : result.message.sourceReferences ?? result.message.sources
+            next[assistantIndex] = {
+              ...next[assistantIndex],
+              ...result.message,
+              chatId: resolvedChatId,
+              aiGenerated: true,
+              text: result.answer || next[assistantIndex].text,
+              sourceReferences:
+                mergedRefs && mergedRefs.length > 0
+                  ? mergedRefs
+                  : next[assistantIndex].sourceReferences,
+            }
+            return next
+          })
         }
       } catch (err) {
         console.error('Send message failed:', err)
+        if (!chatId) {
+          setDraftMessages(null)
+        }
       } finally {
         setIsSubmitting(false)
       }
     },
-    [chatId, hasDocuments, isSubmitting, queryClient, navigate, scopes],
+    [chatId, hasDocuments, isSubmitting, queryClient, navigate],
   )
 
   const canSubmit =
@@ -126,14 +241,14 @@ export function ChatPage() {
     if (!chatId) {
       return
     }
-    const confirmed = window.confirm('Delete this chat? This action cannot be undone.')
+    const confirmed = window.confirm(t('chat.deleteConfirm'))
     if (!confirmed) {
       return
     }
     setIsDeleting(true)
     try {
       await deleteChat(chatId)
-      queryClient.invalidateQueries({ queryKey: ['chats'] })
+      queryClient.invalidateQueries({ queryKey: ['chats', 20] })
       queryClient.removeQueries({ queryKey: ['chat', chatId] })
       queryClient.removeQueries({ queryKey: ['chat-messages', chatId] })
       navigate('/chats')
@@ -142,102 +257,56 @@ export function ChatPage() {
     } finally {
       setIsDeleting(false)
     }
-  }, [chatId, navigate, queryClient])
+  }, [chatId, navigate, queryClient, t])
+
+  if (chatsLoading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
+        <Spinner className="h-8 w-8 text-muted-foreground" />
+      </div>
+    )
+  }
+
+  const showConversation =
+    Boolean(chatId) || Boolean(draftMessages && draftMessages.length > 0)
 
   return (
     <>
       <ChatSidebar
+        className="col-start-1 col-end-2 row-start-1 row-end-3"
+        chats={chats}
         activeChatId={chatId}
         onSelectChat={handleSelectChat}
       />
       <div className="col-start-2 col-end-3 row-start-1 row-end-2 flex min-h-0 flex-1 flex-col">
-        {chatId && (
-          <div className="shrink-0 border-b border-muted pb-3">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {chatData?.name ?? 'New chat'}
-                </h2>
-              </div>
-            {chatId && (
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowShare((prev) => !prev)}
-                    className="inline-flex items-center justify-center rounded-md border border-muted bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    {showShare ? 'Close sharing' : 'Share chat'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteChat}
-                    disabled={isDeleting}
-                    className="inline-flex items-center justify-center rounded-md border border-destructive bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isDeleting ? 'Deleting…' : 'Delete chat'}
-                  </button>
-                </div>
-                {showShare && (
-                  <div className="w-64">
-                    <ShareChatForm chatId={chatId} />
-                  </div>
-                )}
-              </div>
-            )}
-            </div>
-          </div>
-        )}
-
-        {chatId && <MessageList messages={messages} className="min-h-0" />}
-
-        <div className="flex flex-col items-center justify-center shrink-0 pt-3 h-full">
-          <h1 className="text-4xl text-center font-semibold text-foreground mb-10 flex w-full items-center justify-center pb-3 text-center">Sample RAG Client Chat</h1>
-          <QueryInput
-            onSubmit={handleSubmit}
-            disabled={!canSubmit || isSubmitting || (!hasDocuments && !chatId)}
-            placeholder={isSubmitting ? 'Sending...' : 'Ask a question...'}
+        {chatData && (
+          <ChatHeading
+            chat={chatData}
+            showShare={showShare}
+            isDeleting={isDeleting}
+            setShowShare={setShowShare}
+            handleDeleteChat={handleDeleteChat}
+            className="border-b border-muted pb-3"
           />
-          {!hasDocuments && !chatId && (
-            <ChatUnavailable className="mt-2" />
-          )}
-          {isSubmitting && (
-            <div
-              className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
-              aria-busy="true"
-            >
-              <Spinner className="h-4 w-4" />
-              <span>Getting answer...</span>
-            </div>
-          )}
-        </div>
+        )}
+        {showConversation && (
+          <CreatedChatInteractionView
+            messages={displayMessages}
+            documentsById={documentsById}
+            handleSubmit={handleSubmit}
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+          />
+        )}
+        {!showConversation && (
+          <NewChatBlock
+            handleSubmit={handleSubmit}
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+            hasDocuments={hasDocuments}
+          />
+        )}
       </div>
     </>
-  )
-}
-
-function Spinner({ className }: { className?: string }) {
-  return (
-    <svg
-      className={cn('animate-spin', className)}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      aria-hidden
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
   )
 }

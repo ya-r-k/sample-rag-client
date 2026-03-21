@@ -3,6 +3,7 @@ import { cn } from '../../../shared/lib/cn'
 export type ChatListItemProps = {
   id: string
   title: string
+  fallbackTitle: string
   isActive?: boolean
   onClick: () => void
   className?: string
@@ -14,6 +15,7 @@ export type ChatListItemProps = {
 export function ChatListItem({
   id,
   title,
+  fallbackTitle,
   isActive = false,
   onClick,
   className,
@@ -29,10 +31,10 @@ export function ChatListItem({
         className,
       )}
       aria-current={isActive ? 'true' : undefined}
-      aria-label={title || 'New chat'}
+      aria-label={title || fallbackTitle}
     >
       <span className="block truncate" title={title}>
-        {title || 'New chat'}
+        {title || fallbackTitle}
       </span>
     </button>
   )

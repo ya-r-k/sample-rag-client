@@ -108,6 +108,7 @@ useDropzone({
 - **Prettier / Stylelint:** В репозитории не найдены.
 - **Именование и организация:** Единых соглашений в коде не видно из-за отсутствия исходников; план предписывает FSD и запрет `any`.
 - **TypeScript:** В `tsconfig.app.json` включены `strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedSideEffectImports`; целевой план запрещает `any`.
+- **TanStack Query (`queryFn`):** Нельзя передавать `queryFn: apiFn` напрямую, если `apiFn` ожидает объект фильтров/параметров с необязательными полями. TanStack Query передает `QueryFunctionContext` (`{ client, queryKey, signal }`), и TypeScript может считать типы совместимыми, из-за чего фильтры молча станут `undefined`. Используйте обертку `queryFn: () => apiFn(filters)` или извлекайте фильтры из `queryKey`.
 - **Тесты:** В .esproj указаны Jest и корень тестов `src/`. В конституции проекта зафиксировано: тесты не обязательны. Тестовых файлов в репозитории не обнаружено.
 - **Документация в коде:** Не применимо — кода приложения нет. README — стандартный Vite+React+TS; CHANGELOG описывает создание проекта через create-vite и добавление .esproj.
 

@@ -10,6 +10,8 @@ export type MessageDto = {
   chatId?: string
   text: string
   createdAt?: string
+  aiGenerated?: boolean
+  sourceReferences?: SourceDto[]
 }
 
 export type ChatDto = {
@@ -26,18 +28,26 @@ export type SourceDto = {
 
 /** SendMessageRequest — empty guid for new chat (service may create chat and stream first). */
 export type SendMessageRequestBody = {
-  chatId: string
+  chatId: string | undefined
   text: string
 }
-
-/** Empty guid: use when starting a new chat so the service creates the chat. */
-export const NEW_CHAT_ID = '00000000-0000-0000-0000-000000000000'
 
 export type SendMessageResponse = {
   message: MessageDto
   chat?: ChatDto
   answer: string
   sources: SourceDto[]
+}
+
+export type SendMessageStreamEvent = {
+  textDelta?: string
+  message?: MessageDto
+  chat?: ChatDto
+  sources?: SourceDto[]
+}
+
+export type SendMessageOptions = {
+  onEvent?: (event: SendMessageStreamEvent) => void
 }
 
 /** GetMessagesByModel for POST /messages/filter. */
@@ -53,8 +63,11 @@ export type GetMessagesByModel = {
  */
 export async function sendMessage(
   body: SendMessageRequestBody,
+  options?: SendMessageOptions,
 ): Promise<SendMessageResponse> {
-  const response = await authorizedFetch('/messages', {
+  console.log('sendMessage', body)
+
+  const response = await authorizedFetch('/api/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -64,10 +77,10 @@ export async function sendMessage(
     throw new Error(`Request failed with status ${response.status}`)
   }
 
-  const contentType = response.headers.get('content-type') ?? ''
+  const contentType = (response.headers.get('content-type') ?? '').toLowerCase()
 
   if (contentType.includes('text/event-stream')) {
-    return parseSSEResponse(response)
+    return parseSSEResponse(response, options)
   }
 
   return (await response.json()) as SendMessageResponse
@@ -79,13 +92,16 @@ export async function sendMessage(
 export async function getMessagesFilter(
   body: GetMessagesByModel,
 ): Promise<MessageDto[]> {
-  return apiPost<GetMessagesByModel, MessageDto[]>('/messages/filter', body)
+  return apiPost<GetMessagesByModel, MessageDto[]>('/api/messages/filter', body)
 }
 
 /**
  * Parses SSE stream into a single SendMessageResponse.
  */
-async function parseSSEResponse(response: Response): Promise<SendMessageResponse> {
+async function parseSSEResponse(
+  response: Response,
+  options?: SendMessageOptions,
+): Promise<SendMessageResponse> {
   const reader = response.body?.getReader()
   if (!reader) {
     throw new Error('No response body')
@@ -114,15 +130,19 @@ async function parseSSEResponse(response: Response): Promise<SendMessageResponse
             const parsed = JSON.parse(data) as Record<string, unknown>
             if (typeof parsed.text === 'string') {
               answer += parsed.text
+              options?.onEvent?.({ textDelta: parsed.text })
             }
             if (parsed.message) {
               message = parsed.message as SendMessageResponse['message']
+              options?.onEvent?.({ message })
             }
             if (parsed.chat) {
               chat = parsed.chat as SendMessageResponse['chat']
+              options?.onEvent?.({ chat })
             }
             if (Array.isArray(parsed.sources)) {
               sources = parsed.sources as SendMessageResponse['sources']
+              options?.onEvent?.({ sources })
             }
           } catch {
             // ignore non-JSON or partial lines

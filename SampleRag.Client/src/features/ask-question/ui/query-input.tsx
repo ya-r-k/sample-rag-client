@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Button } from '../../../shared/ui/button'
 import { cn } from '../../../shared/lib/cn'
 import { ArrowUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 type QueryInputProps = {
   onSubmit: (text: string) => void
@@ -13,10 +14,12 @@ type QueryInputProps = {
 export function QueryInput({
   onSubmit,
   disabled = false,
-  placeholder = 'Ask a question...',
+  placeholder,
   className,
 }: QueryInputProps) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
+  const effectivePlaceholder = placeholder ?? t('chat.placeholderAsk')
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -31,7 +34,7 @@ export function QueryInput({
   )
 
   return (
-    <div className={cn("max-w-xl w-full bg-white dark:bg-gray-900 outline-none flex items-center border rounded-2xl transition-all duration-75 border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-xl px-4 py-3 gap-2", className)}>
+    <div className={cn("max-w-3xl w-full bg-white dark:bg-gray-900 outline-none flex items-center border rounded-2xl transition-all duration-75 border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-xl px-4 py-3 gap-2", className)}>
       <form onSubmit={handleSubmit} className='w-full h-full grid grid-cols-[1fr_1fr_1fr] grid-rows-[1fr_auto]'>
         <div
           id="user-query-input"
@@ -45,8 +48,8 @@ export function QueryInput({
             setValue(e.currentTarget.textContent.trim() || '')
           }}
           role="textbox"
-          aria-placeholder={placeholder}
-          aria-label="User query input"
+          aria-placeholder={effectivePlaceholder}
+          aria-label={t('queryInput.ariaLabel')}
           style={{ userSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
           className="col-start-1 col-end-4 row-start-1 row-end-2 my-3
             w-full h-full 
@@ -64,7 +67,7 @@ export function QueryInput({
             className='transition-all duration-200 rounded-full aspect-square flex items-center justify-center h-7 w-7 shrink-0 bg-white text-gray-900' 
             type="submit" 
             disabled={!value.trim()}
-            aria-label='Send'>
+            aria-label={t('queryInput.sendAriaLabel')}>
             <ArrowUp className='w-3 h-3' />
           </Button>
         </div>

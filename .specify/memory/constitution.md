@@ -26,6 +26,8 @@ The design MUST remain ready to be reconfigured later to use an external OIDC pr
 
 TanStack Query v5.59+ for all requests. Retry logic: do NOT retry 401/403; 3 attempts for other errors. staleTime 5 minutes, refetchOnWindowFocus=false. Offline support via Service Worker, optimistic updates, and skeletons. Streaming via EventSource for SSE.
 
+TanStack Query: `queryFn` MUST not be passed as a direct reference to an API function when that API function expects an optional "filters" object. TanStack Query will call it with `QueryFunctionContext` (`{ client, queryKey, signal }`), which is structurally compatible with optional filter types and can silently break filtering. Always use a wrapper: `queryFn: () => apiFn(filters)` or extract filters from `queryKey`.
+
 ### IV. Navigation
 
 React Router v7+ with createBrowserRouter. Smooth URL transitions via Framer Motion v12+ AnimatePresence mode="wait", layoutId for shared element transitions when browser address bar changes.
@@ -41,6 +43,10 @@ Zustand v5+ with persist middleware for global UI state (active chat, theme, fil
 ### VII. UI & Styling
 
 Tailwind CSS v3.4+ and SCSS preprocessor with CSS Variables for theming. shadcn/ui for components, Headless UI for primitives, Lucide React for icons. Dark/light/system themes via CSS vars + Zustand store with prefers-color-scheme auto-detection.
+
+Create and edit forms for the same entity MUST be implemented as one reusable component with configurable props for field visibility and validation requirements (required/optional fields).
+
+Any destructive action (delete/remove) MUST require explicit user confirmation before API call or state mutation. Immediate deletion on single click without confirmation is forbidden.
 
 ### VIII. License & Dependencies
 

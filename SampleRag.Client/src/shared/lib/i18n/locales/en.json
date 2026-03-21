@@ -1,5 +1,5 @@
 {
-  "appName": "RAG Chat",
+  "appName": "Sample RAG Client",
   "nav": {
     "chats": "Chats",
     "documents": "Documents",
@@ -9,12 +9,12 @@
     "placeholder": "User"
   },
   "footer": {
-    "appName": "RAG Chat",
+    "appName": "Sample RAG Client",
     "rights": "All rights reserved",
     "version": "Version {{version}}"
   },
   "main": {
-    "title": "Welcome to RAG Chat",
+    "title": "Welcome to Sample RAG Client",
     "subtitle": "Ask questions over your documents and manage scopes in one place.",
     "cards": {
       "chat": {
@@ -28,6 +28,115 @@
         "action": "Manage documents"
       }
     }
+  },
+  "chatSidebar": {
+    "ariaLabel": "Chat list",
+    "newChat": "New Chat",
+    "searchPlaceholder": "Search chats",
+    "empty": "No chats yet. Start a new chat to see it here.",
+    "noResults": "No chats match your search."
+  },
+  "chat": {
+    "newChatName": "New chat",
+    "deleteConfirm": "Delete this chat? This action cannot be undone.",
+    "placeholderSending": "Sending...",
+    "placeholderAsk": "Ask a question...",
+    "placeholderClarify": "Clarify your question...",
+    "gettingAnswer": "Getting answer...",
+    "shareChat": "Share chat",
+    "closeSharing": "Close sharing",
+    "deleting": "Deleting...",
+    "deleteChat": "Delete chat",
+    "sourcePage": "[Source: p.{{page}}]",
+    "sourceWithDocName": "{{name}} · p.{{page}}",
+    "newChatTitle": "Sample RAG Client Chat"
+  },
+  "queryInput": {
+    "ariaLabel": "User query input",
+    "sendAriaLabel": "Send"
+  },
+  "common": {
+    "mainNavigation": "Main navigation",
+    "logoAlt": "Logo"
+  },
+  "documentsPage": {
+    "noAccess": "You do not have access to document management. This page is available to admins only.",
+    "title": "Documents",
+    "subtitle": "Create scopes and upload PDF documents for RAG search.",
+    "uploadDocument": "Upload document",
+    "listTitle": "Documents list",
+    "listDescription": "Showing up to 10 documents from the API. Use the link to open a document in a new tab.",
+    "empty": "No documents found.",
+    "viewLocal": "View local document",
+    "viewOriginal": "Original document",
+    "edit": "Edit",
+    "delete": "Delete",
+    "moreDocuments": "more documents...",
+    "modalTitle": "Upload document",
+    "modalDescription": "Choose a scope and upload a PDF file (max 20MB). The document will be chunked and indexed again.",
+    "editModalTitle": "Edit document",
+    "editModalDescription": "Update document metadata. File upload is not required in edit mode.",
+    "saveChanges": "Save changes",
+    "savingChanges": "Saving changes...",
+    "scope": "Scope",
+    "selectScope": "Select scope",
+    "noScopesYet": "No scopes yet",
+    "noMatchingScopes": "No matching scopes found.",
+    "close": "Close",
+    "deleteConfirm": "Delete document \"{{name}}\"? This action cannot be undone."
+  },
+  "documentUpload": {
+    "dropActive": "Drop PDF here...",
+    "dropIdle": "Drag and drop a PDF here, or click to select",
+    "pdfOnly": "PDF only, up to 20MB.",
+    "uploading": "Uploading...",
+    "uploadButton": "Upload",
+    "nameLabel": "Document name",
+    "namePlaceholder": "Enter document name",
+    "noFileSelected": "No file selected",
+    "selectedFile": "Selected file: {{fileName}}",
+    "scopeRequired": "Select a scope before uploading.",
+    "fileRequired": "Select a PDF file before uploading.",
+    "nameRequired": "Document name is required.",
+    "invalidFile": "Only PDF files up to 20MB are allowed.",
+    "uploadFailed": "Upload failed"
+  },
+  "shareChat": {
+    "failed": "Failed to share chat",
+    "ariaLabel": "Share chat",
+    "label": "Share with user (ID, username, or email)",
+    "placeholder": "Enter identifier",
+    "sharing": "Sharing...",
+    "share": "Share"
+  },
+  "scopesPage": {
+    "noAccess": "This page is available to admins only.",
+    "title": "Knowledge scopes",
+    "subtitle": "View and manage scopes used for grouping documents.",
+    "addNewTitle": "Add new scope",
+    "addNewDescription": "Enter a name and save to create a new scope.",
+    "scopeNamePlaceholder": "Scope name",
+    "saving": "Saving...",
+    "save": "Save",
+    "more": "More scopes..."
+  },
+  "createScope": {
+    "failed": "Failed to create scope",
+    "ariaLabel": "Create scope",
+    "label": "New scope name",
+    "placeholder": "Enter scope name",
+    "creating": "Creating...",
+    "create": "Create scope"
+  },
+  "chatUnavailable": {
+    "title": "Chat is unavailable.",
+    "description": "There are no documents available for the selected scope. Add documents or choose a different scope to start asking questions."
+  },
+  "documentViewer": {
+    "title": "PDF Viewer",
+    "untitled": "Document",
+    "missingPath": "Document path is missing.",
+    "loading": "Opening document...",
+    "error": "Failed to open document."
   }
 }
-

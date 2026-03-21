@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { addChatOwners } from '../../../shared/api/chats'
 import { cn } from '../../../shared/lib/cn'
+import { useTranslation } from 'react-i18next'
 
 type ShareChatFormProps = {
   chatId: string
@@ -13,6 +14,7 @@ type ShareChatFormProps = {
  * client sends it as userId to POST /api/chats/{id}/owners.
  */
 export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [value, setValue] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +31,7 @@ export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Failed to share chat'
+      const message = err instanceof Error ? err.message : t('shareChat.failed')
       setError(message)
     },
   })
@@ -44,10 +46,10 @@ export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
     <form
       onSubmit={handleSubmit}
       className={cn('flex flex-col gap-2', className)}
-      aria-label="Share chat"
+      aria-label={t('shareChat.ariaLabel')}
     >
       <label className="text-xs font-medium text-muted-foreground">
-        Share with user (ID, username, or email)
+        {t('shareChat.label')}
       </label>
       <div className="flex gap-2">
         <input
@@ -55,7 +57,7 @@ export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          placeholder="Enter identifier"
+          placeholder={t('shareChat.placeholder')}
           disabled={mutation.isPending}
         />
         <button
@@ -63,7 +65,7 @@ export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
           className="inline-flex items-center justify-center rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
           disabled={mutation.isPending || !value.trim()}
         >
-          {mutation.isPending ? 'Sharing…' : 'Share'}
+          {mutation.isPending ? t('shareChat.sharing') : t('shareChat.share')}
         </button>
       </div>
       {error && (

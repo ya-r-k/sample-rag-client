@@ -17,7 +17,7 @@ export function Header() {
   return (
     <header className="border-b border-muted bg-background/80 px-8 py-4 backdrop-blur">
       <div className="flex items-center justify-between gap-6">
-        <nav className="flex items-center gap-4" aria-label="Main">
+        <nav className="flex items-center gap-4" aria-label={t('common.mainNavigation')}>
           <Link
             to="/"
             className={cn(

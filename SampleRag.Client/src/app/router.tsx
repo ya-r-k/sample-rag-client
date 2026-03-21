@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import { AppLayout } from './layout'
 import { MainPage } from '../pages/main/ui/main-page'
 import { ChatPage } from '../pages/chat/ui/chat-page'
-import { ChatsIndexGate } from '../pages/chat/ui/chats-index-gate'
 import { DocumentsPage } from '../pages/documents/ui/documents-page'
+import { DocumentViewerPage } from '../pages/documents/ui/document-viewer-page'
 import { ScopesPage } from '../pages/scopes/ui/scopes-page'
 import { Footer } from '../widgets/footer/ui/footer'
 
@@ -29,7 +29,7 @@ const router = createBrowserRouter([
     element: (
       <PageTransition>
         <div className="grid h-screen grid-cols-[280px_1fr] grid-rows-[1fr_auto] gap-x-0 gap-y-0">
-          <ChatsIndexGate />
+          <ChatPage />
           <Footer className="col-start-2 col-end-3 row-start-2 row-end-3" />
         </div>
       </PageTransition>
@@ -55,6 +55,10 @@ const router = createBrowserRouter([
         </AppLayout>
       </PageTransition>
     ),
+  },
+  {
+    path: '/documents/view',
+    element: <DocumentViewerPage />,
   },
   {
     path: '/scopes',
@@ -90,4 +94,3 @@ function PageTransition({ children }: PageTransitionProps) {
 export function AppRouter() {
   return <RouterProvider router={router} />
 }
-

@@ -1,4 +1,5 @@
 import { cn } from '../../../shared/lib/cn'
+import { useTranslation } from 'react-i18next'
 
 type ChatUnavailableProps = {
   reason?: string
@@ -10,6 +11,7 @@ type ChatUnavailableProps = {
  * Matches UX-006: clear explanation, encourages user to add documents or change scope.
  */
 export function ChatUnavailable({ reason, className }: ChatUnavailableProps) {
+  const { t } = useTranslation()
   return (
     <div
       className={cn(
@@ -18,10 +20,9 @@ export function ChatUnavailable({ reason, className }: ChatUnavailableProps) {
       )}
       role="status"
     >
-      <p className="font-medium">Chat is unavailable.</p>
+      <p className="font-medium">{t('chatUnavailable.title')}</p>
       <p className="mt-1">
-        There are no documents available for the selected scope. Add documents or choose a different
-        scope to start asking questions.
+        {t('chatUnavailable.description')}
       </p>
       {reason && <p className="mt-1 text-amber-800 dark:text-amber-200">{reason}</p>}
     </div>

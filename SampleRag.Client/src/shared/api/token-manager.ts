@@ -39,10 +39,6 @@ async function fetchJwtToken(): Promise<string | null> {
 
 export async function authorizedFetch(input: string, init?: RequestInit): Promise<Response> {
   let accessToken = useAuthStore.getState().accessToken
-
-  console.log('apiBaseUrl', API_BASE_URL)
-  console.log('authUrl', AUTH_LOGIN_URL)
-
   if (!accessToken) {
     accessToken = await fetchJwtToken()
   }
