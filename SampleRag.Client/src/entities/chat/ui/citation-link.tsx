@@ -10,7 +10,7 @@ import type { DocumentDto } from '../../../shared/api/documents'
 export function getDocumentAssetUrl(localLink: string, name: string, pageNumber?: number): string {
   const base = `/documents/view?path=${encodeURIComponent(localLink)}&name=${encodeURIComponent(name)}`
   if (pageNumber != null && pageNumber > 0) {
-    return `${base}?page=${pageNumber}`
+    return `${base}&page=${pageNumber}`
   }
   return base
 }

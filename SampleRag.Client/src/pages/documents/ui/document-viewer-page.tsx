@@ -11,6 +11,7 @@ export function DocumentViewerPage() {
 
   const localPath = searchParams.get('path') ?? ''
   const documentName = searchParams.get('name') ?? t('documentViewer.untitled')
+  const pageNumber = searchParams.get('page') ?? 1
 
   const { data: blobUrl, isLoading, error } = useQuery({
     queryKey: ['document-viewer', localPath],
@@ -62,7 +63,7 @@ export function DocumentViewerPage() {
     <div className="h-screen w-screen bg-background">
       <iframe
         title={title}
-        src={blobUrl}
+        src={`${blobUrl}#page=${pageNumber}`}
         className="h-full w-full border-0"
       />
     </div>
