@@ -1,0 +1,363 @@
+openapi: 3.0.3
+info:
+  title: RAG Chat Client API
+  description: API contract aligned with Demo RAG API (api-endpoints.md). Client consumes this API.
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Local API base (per api-endpoints.md)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- Scopes (Knowledge Groups) ---
+  /groups:
+    get:
+      summary: List scopes (knowledge groups)
+      description: Returns scopes; optionally only those caller can use.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Scope' }
+    post:
+      summary: Create scope (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scope' }
+        '403':
+          description: Not admin
+
+  /groups/{id}/users:
+    post:
+      summary: Add user to scope (admin only, optional)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                userIds: { type: array, items: { type: string } }
+      responses:
+        '200':
+        '204':
+        '403':
+          description: Not admin
+
+  /groups/{id}/users/{userId}:
+    delete:
+      summary: Remove user from scope (admin only, optional)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+        '403':
+          description: Not admin
+
+  # --- Documents (Upload) ---
+  /documents:
+    post:
+      summary: Upload PDF (admin only; caller must have scope access)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [scopeId, file]
+              properties:
+                scopeId: { type: string }
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file, max 20MB
+          application/json:
+            schema:
+              type: object
+              required: [scopeId]
+              properties:
+                scopeId: { type: string }
+                data: { type: string }
+                  description: Base64-encoded file content
+                fileName: { type: string }
+      responses:
+        '201':
+        '204':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '400':
+          description: Not PDF or size exceeded
+        '403':
+          description: Not admin or no scope access
+
+  # --- Chats ---
+  /chats:
+    get:
+      summary: List chats (where caller is in ownerIds)
+      parameters:
+        - name: batchSize
+          in: query
+          schema: { type: integer }
+        - name: lastUsedIndex
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Chat' }
+    post:
+      summary: Create chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, scopeId]
+              properties:
+                title: { type: string }
+                scopeId: { type: string }
+                ownerIds: { type: array, items: { type: string } }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Chat' }
+        '403':
+          description: No scope access
+
+  /chats/{id}:
+    get:
+      summary: Get chat by id
+      description: Response may include optional `messages` array. If absent, client accumulates from POST /messages responses.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Chat' }
+                  - type: object
+                    properties:
+                      messages:
+                        type: array
+                        items: { $ref: '#/components/schemas/Message' }
+                        description: Optional; if API returns, use for history; else accumulate from send responses
+        '404':
+          description: Chat not found
+    delete:
+      summary: Delete chat (owner only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+        '403':
+          description: Not owner
+
+  /chats/{id}/owners:
+    post:
+      summary: Add owner(s) to chat (share chat)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                userIds: { type: array, items: { type: string } }
+      responses:
+        '200':
+        '204':
+        '403':
+          description: Not existing owner
+
+  # --- Messages (including RAG and "send without chat") ---
+  /messages:
+    post:
+      summary: Send message (existing chat or create new chat)
+      description: |
+        - Existing chat: body = { chatId, text }
+        - New chat: body = { scopeId, text } — server creates chat with generated title, adds message, runs RAG, returns answer with sources.
+        Returns stream (SSE) or 201 with message + optional new chat.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [chatId, text]
+                  properties:
+                    chatId: { type: string }
+                    text: { type: string }
+                - type: object
+                  required: [scopeId, text]
+                  properties:
+                    scopeId: { type: string }
+                    text: { type: string }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { $ref: '#/components/schemas/Message' }
+                  chat: { $ref: '#/components/schemas/Chat' }
+                  answer: { type: string }
+                  sources:
+                    type: array
+                    items: { $ref: '#/components/schemas/Source' }
+        '400':
+          description: Validation (e.g. missing scopeId)
+        '403':
+          description: Not owner if chatId provided; no scope access if scopeId for new chat
+        '404':
+          description: Chat not found
+
+  /messages/{messageId}/feedback:
+    get:
+      summary: Get feedback for message
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Feedback' }
+    post:
+      summary: Submit like or dislike (idempotent per messageId, user)
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isLike]
+              properties:
+                isLike: { type: boolean }
+      responses:
+        '200':
+        '204':
+
+  # --- Files (download) ---
+  /files/assets/documents/{fileName}:
+    get:
+      summary: Download file by name
+      description: Only via API; no static file serving of uploads.
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+        '206':
+          description: Partial content
+        '404':
+          description: File not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Scope:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+
+    Chat:
+      type: object
+      required: [id, title, scopeId, ownerIds]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        scopeId: { type: string }
+        ownerIds: { type: array, items: { type: string } }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        chatId: { type: string }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Source:
+      type: object
+      required: [documentId, pageNumber]
+      properties:
+        documentId: { type: string }
+        pageNumber: { type: integer }
+
+    Document:
+      type: object
+      required: [id, name, scopeId]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        localLink: { type: string }
+        scopeId: { type: string }
+
+    Feedback:
+      type: object
+      properties:
+        messageId: { type: string }
+        userId: { type: string }
+        isLike: { type: boolean }

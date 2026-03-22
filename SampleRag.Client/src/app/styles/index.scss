@@ -1,0 +1,14 @@
+:root {
+  --bg-color: #0b1120;
+  --fg-color: #e5e7eb;
+  --primary-color: #0ea5e9;
+  --primary-foreground-color: #0f172a;
+  --muted-color: #1f2937;
+  --muted-foreground-color: #9ca3af;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--fg-color);
+}
+

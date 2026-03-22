@@ -1,3 +1,54 @@
+node_modules/
+package-lock.json
+dist/
+dist-ssr
+*.local
+coverage/
+*.tmp
+*.swp
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# dotenv environment variable files
+.env
+.env.*
+
+# Editor and IDE
+.vscode/
+.idea/
+
+# SampleRag client build artifacts
+SampleRag.Client/node_modules/
+SampleRag.Client/dist/
+SampleRag.Client/package-lock.json
+**/SampleRag.Client.esproj.user
+
+# AI IDEs
+**/.cursor/
+
+# Visual Studio
+**/.vs
+**/obj/Debug
+
 # Logs
 logs
 *.log
@@ -64,11 +115,6 @@ web_modules/
 
 # Yarn Integrity file
 .yarn-integrity
-
-# dotenv environment variable files
-.env
-.env.*
-!.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
