@@ -20,5 +20,15 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+**/.cursor
+**/.specify
+**/specs
+**/Scripts
+**/.cursorignore
+**/*.sln
+**/*.slnx
+**/*.esproj
+**/*.esproj.user
 LICENSE
 README.md
+project.md
