@@ -166,6 +166,7 @@ sample-rag-client/
 
 | Resource | Description |
 |----------|-------------|
+| [project.md](project.md) | Technical deep-dive: architecture, client patterns, tests, risks, and improvement recommendations (not onboarding) |
 | [specs/001-rag-chat-client/quickstart.md](specs/001-rag-chat-client/quickstart.md) | Feature quickstart and directory map |
 | [specs/001-rag-chat-client/spec.md](specs/001-rag-chat-client/spec.md) | Product specification and user stories |
 | [specs/001-rag-chat-client/contracts/api-endpoints.md](specs/001-rag-chat-client/contracts/api-endpoints.md) | HTTP contract overview |
