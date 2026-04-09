@@ -7,19 +7,12 @@ import {
 } from '@headlessui/react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '../../../shared/lib/cn'
-import { useScopeSelector } from './use-scope-selector'
+import { useScopeSelector } from './scope-selector.hook'
+import { ScopeSelectorProps } from './scope-selector.props'
 
 export type ScopeItem = {
   id: string
   name: string
-}
-
-type ScopeSelectorProps = {
-  value: string | null
-  onChange: (scopeId: string | null) => void
-  placeholder?: string
-  disabled?: boolean
-  className?: string
 }
 
 export function ScopeSelector({

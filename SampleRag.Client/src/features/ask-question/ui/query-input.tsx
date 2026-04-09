@@ -5,16 +5,7 @@ import { ArrowUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMessageSubmissionStore } from '../../../shared/store/message-submission-store'
 import { ScopeSelector } from './scope-selector'
-
-type QueryInputProps = {
-  onSubmit: (text: string, scopeId: string | null) => void
-  chatId?: string | null
-  scopeId: string | null
-  onScopeIdChange: (scopeId: string | null) => void
-  disabled?: boolean
-  placeholder?: string
-  className?: string
-}
+import { QueryInputProps } from './query-input.props'
 
 export function QueryInput({
   onSubmit,
