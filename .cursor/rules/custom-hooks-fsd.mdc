@@ -1,9 +1,10 @@
 ---
-description: "Extract complex component hook logic into one FSD custom hook"
+description: "Extract complex component hook logic into a colocated .hook.ts file"
 globs:
   - "SampleRag.Client/src/features/**/ui/**/*.{ts,tsx}"
   - "SampleRag.Client/src/pages/**/ui/**/*.{ts,tsx}"
   - "SampleRag.Client/src/widgets/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/**/*.hook.ts"
 alwaysApply: false
 ---
 
@@ -22,11 +23,11 @@ alwaysApply: false
   - Inputs: value, callbacks, optional params.
   - Outputs: data/options, loading/error flags, derived values, event handlers.
 
-## FSD placement rules for this project
-- Default location: `SampleRag.Client/src/features/<feature>/lib/use<Feature><Entity>.ts`.
-- If `lib` folder does not exist in that feature, create it.
-- If the same hook is reused by multiple features without feature-specific dependencies, move to `SampleRag.Client/src/shared/lib/hooks/use<Domain>.ts`.
-- Do not place complex orchestration hooks directly in `ui` files.
+## Placement and file naming (this project)
+- Colocate the hook with its UI component in the same folder.
+- Name the file `<component-name>.hook.ts` (e.g. `query-input.hook.ts` exporting `useQueryInput`).
+- If the same hook is reused by multiple features without feature-specific dependencies, move to `SampleRag.Client/src/shared/lib/hooks/use<Domain>.ts` and keep the `use*` file name there.
+- Do not leave complex orchestration inline in the `.tsx` file when the criteria above apply.
 
 ## Naming and quality
 - Hook names must be explicit and domain-oriented (`useScopeSelector`, `useUploadDocumentForm`, `useChatComposer`).

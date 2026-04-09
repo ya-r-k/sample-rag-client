@@ -21,6 +21,7 @@ export function ScopeSelector({
   placeholder,
   disabled,
   className,
+  flipOptionsUp = false,
 }: ScopeSelectorProps) {
   const {
     t,
@@ -53,7 +54,10 @@ export function ScopeSelector({
           <ChevronDown className="h-4 w-4" />
         </ComboboxButton>
         <ComboboxOptions
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-muted bg-background py-1 shadow-lg"
+          className={cn(
+            'absolute left-0 right-0 z-50 max-h-60 w-full overflow-auto rounded-md border border-muted bg-background py-1 shadow-lg',
+            flipOptionsUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
         >
           {filteredScopes.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">

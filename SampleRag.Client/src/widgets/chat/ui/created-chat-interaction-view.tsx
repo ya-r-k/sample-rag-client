@@ -11,9 +11,11 @@ type CreatedChatInteractionViewProps = {
   chatId: string
   messages: MessageDto[]
   documentsById?: Record<string, DocumentDto>
-  handleSubmit: (text: string, scopeId: string | null) => void
-  scopeId: string | null
-  onScopeIdChange: (scopeId: string | null) => void
+  handleSubmit: (
+    chatId: string | null,
+    scopeId: string | null,
+    text: string,
+  ) => void | Promise<void>
   canSubmit: boolean
   isSubmitting: boolean
 }
@@ -24,8 +26,6 @@ export function CreatedChatInteractionView({
   messages,
   documentsById,
   handleSubmit,
-  scopeId,
-  onScopeIdChange,
   canSubmit,
   isSubmitting,
 }: CreatedChatInteractionViewProps) {
@@ -37,8 +37,6 @@ export function CreatedChatInteractionView({
         <QueryInput
           onSubmit={handleSubmit}
           chatId={chatId}
-          scopeId={scopeId}
-          onScopeIdChange={onScopeIdChange}
           disabled={!canSubmit || isSubmitting}
           placeholder={isSubmitting ? t('chat.placeholderSending') : t('chat.placeholderClarify')}
         />

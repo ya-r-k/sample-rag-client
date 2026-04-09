@@ -1,5 +1,5 @@
 import { cn } from '../../../shared/lib/cn'
-import { useCreateScopeForm } from './use-create-scope-form'
+import { useCreateScopeForm } from './create-scope-form.hook'
 
 type CreateScopeFormProps = {
   className?: string

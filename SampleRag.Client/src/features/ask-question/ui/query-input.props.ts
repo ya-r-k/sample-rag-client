@@ -1,10 +1,11 @@
 export type QueryInputProps = {
-    onSubmit: (text: string, scopeId: string | null) => void
-    chatId?: string | null
-    scopeId: string | null
-    onScopeIdChange: (scopeId: string | null) => void
-    disabled?: boolean
-    placeholder?: string
-    className?: string
-  }
-  
+  onSubmit: (
+    chatId: string | null,
+    scopeId: string | null,
+    text: string,
+  ) => void | Promise<void>
+  chatId?: string | null
+  disabled?: boolean
+  placeholder?: string
+  className?: string
+}

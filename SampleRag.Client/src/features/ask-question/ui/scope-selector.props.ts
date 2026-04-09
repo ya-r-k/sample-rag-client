@@ -4,4 +4,5 @@ export type ScopeSelectorProps = {
   placeholder?: string
   disabled?: boolean
   className?: string
+  flipOptionsUp?: boolean
 }

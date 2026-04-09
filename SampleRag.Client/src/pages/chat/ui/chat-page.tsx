@@ -70,7 +70,6 @@ export function ChatPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [hasDocuments] = useState(true)
-  const [selectedScopeId, setSelectedScopeId] = useState<string | null>(DEFAULT_SCOPE_ID)
 
   const chats = useChatsStore((s) => s.chats)
   const displayMessages = useMessagesStore((s) =>
@@ -120,29 +119,23 @@ export function ChatPage() {
     () => Object.fromEntries(loadedDocuments.map((d: DocumentDto) => [d.id, d])),
     [loadedDocuments],
   )
-  useEffect(() => {
-    if (chatData?.scopeId) {
-      setSelectedScopeId(chatData.scopeId)
-      return
-    }
-    if (!chatId) {
-      setSelectedScopeId(DEFAULT_SCOPE_ID)
-    }
-  }, [chatData?.scopeId, chatId])
-
   const handleSubmit = useCallback(
-    async (text: string, pickedScopeId: string | null) => {
+    async (
+      currentChatId: string | null,
+      pickedScopeId: string | null,
+      text: string,
+    ) => {
       if (isSubmitting) return
-      if (!hasDocuments && !chatId) return
-      const nextScopeId = pickedScopeId ?? selectedScopeId ?? DEFAULT_SCOPE_ID
+      if (!hasDocuments && !currentChatId) return
+      const nextScopeId = pickedScopeId ?? DEFAULT_SCOPE_ID
 
       const chatsStore = useChatsStore.getState()
       const messagesStore = useMessagesStore.getState()
       const artifactsStore = useStreamArtifactsStore.getState()
 
       setIsSubmitting(true)
-      const optimisticChatId = !chatId ? crypto.randomUUID() : null
-      let streamChatId = chatId ?? optimisticChatId!
+      const optimisticChatId = !currentChatId ? crypto.randomUUID() : null
+      let streamChatId = currentChatId ?? optimisticChatId!
       const streamChatIdRef = { current: streamChatId }
       const optimisticResolvedRef = { current: false }
       const turnId = crypto.randomUUID()
@@ -166,13 +159,13 @@ export function ChatPage() {
       }
 
       try {
-        if (chatId) {
-          messagesStore.appendUserAndAssistantPlaceholders(chatId, text)
+        if (currentChatId) {
+          messagesStore.appendUserAndAssistantPlaceholders(currentChatId, text)
         }
 
         const result = await sendMessage(
           {
-            chatId: chatId ?? undefined,
+            chatId: currentChatId ?? undefined,
             scopeId: nextScopeId,
             text,
           },
@@ -265,7 +258,7 @@ export function ChatPage() {
         setIsSubmitting(false)
       }
     },
-    [chatId, hasDocuments, isSubmitting, navigate, selectedScopeId, t],
+    [chatId, hasDocuments, isSubmitting, navigate, t],
   )
 
   const canSubmit = !isSubmitting && !isDeleting
@@ -320,8 +313,6 @@ export function ChatPage() {
             messages={displayMessages}
             documentsById={documentsById}
             handleSubmit={handleSubmit}
-            scopeId={selectedScopeId}
-            onScopeIdChange={setSelectedScopeId}
             canSubmit={canSubmit}
             isSubmitting={isSubmitting}
           />
@@ -329,8 +320,6 @@ export function ChatPage() {
         {!showConversation && (
           <NewChatBlock
             handleSubmit={handleSubmit}
-            scopeId={selectedScopeId}
-            onScopeIdChange={setSelectedScopeId}
             canSubmit={canSubmit}
             isSubmitting={isSubmitting}
             hasDocuments={hasDocuments}

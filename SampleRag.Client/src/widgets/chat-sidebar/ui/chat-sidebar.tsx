@@ -4,7 +4,7 @@ import { ScrollArea } from '../../../shared/ui/scroll-area'
 import { cn } from '../../../shared/lib/cn'
 import { Plus, Search } from 'lucide-react'
 import logo from '../../../assets/logo.svg'
-import { useChatSidebar } from '../lib/use-chat-sidebar'
+import { useChatSidebar } from './chat-sidebar.hook'
 
 export type ChatSidebarProps = {
   activeChatId: string | undefined

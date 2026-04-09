@@ -1,5 +1,5 @@
 import { Spinner } from '../../../shared/ui/spinner'
-import { useDocumentViewerPage } from './use-document-viewer-page'
+import { useDocumentViewerPage } from './document-viewer-page.hook'
 
 export function DocumentViewerPage() {
   const { t, localPath, pageNumber, blobUrl, isLoading, error, title } = useDocumentViewerPage()

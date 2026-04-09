@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next'
 
 type NewChatBlockProps = {
   className?: string
-  handleSubmit: (text: string, scopeId: string | null) => void
-  scopeId: string | null
-  onScopeIdChange: (scopeId: string | null) => void
+  handleSubmit: (
+    chatId: string | null,
+    scopeId: string | null,
+    text: string,
+  ) => void | Promise<void>
   chatId?: string | null
   canSubmit: boolean
   isSubmitting: boolean
@@ -16,8 +18,6 @@ type NewChatBlockProps = {
 export function NewChatBlock({
   className,
   handleSubmit,
-  scopeId,
-  onScopeIdChange,
   chatId = null,
   canSubmit,
   isSubmitting,
@@ -30,8 +30,6 @@ export function NewChatBlock({
         <QueryInput
           onSubmit={handleSubmit}
           chatId={chatId}
-          scopeId={scopeId}
-          onScopeIdChange={onScopeIdChange}
           disabled={!canSubmit || isSubmitting || !hasDocuments}
           placeholder={isSubmitting ? t('chat.placeholderSending') : t('chat.placeholderAsk')}
         />
