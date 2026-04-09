@@ -1,17 +1,13 @@
-import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChatListItem } from './chat-list-item'
-import { ChatDto } from '../../../shared/api/chats'
 import { ScrollArea } from '../../../shared/ui/scroll-area'
 import { cn } from '../../../shared/lib/cn'
 import { Plus, Search } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import logo from '../../../assets/logo.svg'
+import { useChatSidebar } from '../lib/use-chat-sidebar'
 
 export type ChatSidebarProps = {
-  chats: ChatDto[]
   activeChatId: string | undefined
-  onSelectChat: (chatId: string) => void
   className?: string
 }
 
@@ -19,25 +15,16 @@ export type ChatSidebarProps = {
  * Sidebar listing user's chats. Fetches GET /api/chats; selecting an item loads that chat.
  * Supports client-side search by chat title with empty-state messaging.
  */
-export function ChatSidebar({
-  chats,
-  activeChatId,
-  onSelectChat,
-  className,
-}: ChatSidebarProps) {
-  const [search, setSearch] = useState('')
-  const { t } = useTranslation()
-
-  const filteredChats = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) {
-      return chats
-    }
-    return chats.filter((chat) => chat.name.toLowerCase().includes(query))
-  }, [chats, search])
-
-  const hasChats = chats.length > 0
-  const hasResults = filteredChats.length > 0
+export function ChatSidebar({ className, activeChatId }: ChatSidebarProps) {
+  const {
+    t,
+    search,
+    setSearch,
+    filteredChats,
+    hasChats,
+    hasResults,
+    handleSelectChat,
+  } = useChatSidebar()
 
   return (
     <div
@@ -99,7 +86,7 @@ export function ChatSidebar({
                 title={chat.name}
                 fallbackTitle={t('chat.newChatName')}
                 isActive={activeChatId === chat.id}
-                onClick={() => onSelectChat(chat.id)}
+                onClick={() => handleSelectChat(chat.id)}
               />
             ))
           )}

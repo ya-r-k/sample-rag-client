@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteChat, getChats } from '../../../shared/api/chats'
+import { deleteChat } from '../../../shared/api/chats'
 import {
   sendMessage,
   getMessagesFilter,
@@ -11,7 +11,6 @@ import {
 import { getDocumentsByIds, type DocumentDto } from '../../../shared/api/documents'
 import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/chat-sidebar'
 import { ChatHeading } from '../../../widgets/chat/ui/chat-heading'
-import { Spinner } from '../../../shared/ui/spinner'
 import { NewChatBlock } from '../../../widgets/chat/ui/new-chat-block'
 import { CreatedChatInteractionView } from '../../../widgets/chat/ui/created-chat-interaction-view'
 import { useTranslation } from 'react-i18next'
@@ -79,21 +78,6 @@ export function ChatPage() {
   )
 
   const {
-    data: chatsQueryData,
-    dataUpdatedAt: chatsDataUpdatedAt,
-    isLoading: chatsLoading,
-  } = useQuery({
-    queryKey: CHATS_QUERY_KEY,
-    queryFn: () => getChats({ batchSize: 20 }),
-  })
-
-  useEffect(() => {
-    if (chatsQueryData !== undefined) {
-      useChatsStore.getState().mergeChatsFromServer(chatsQueryData)
-    }
-  }, [chatsQueryData, chatsDataUpdatedAt])
-
-  const {
     data: messagesQueryData,
     dataUpdatedAt: messagesDataUpdatedAt,
   } = useQuery({
@@ -145,13 +129,6 @@ export function ChatPage() {
       setSelectedScopeId(DEFAULT_SCOPE_ID)
     }
   }, [chatData?.scopeId, chatId])
-
-  const handleSelectChat = useCallback(
-    (id: string) => {
-      navigate(`/chats/${id}`)
-    },
-    [navigate],
-  )
 
   const handleSubmit = useCallback(
     async (text: string, pickedScopeId: string | null) => {
@@ -318,23 +295,13 @@ export function ChatPage() {
     }
   }, [chatId, navigate, queryClient, t])
 
-  if (chatsLoading) {
-    return (
-      <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
-        <Spinner className="h-8 w-8 text-muted-foreground" />
-      </div>
-    )
-  }
-
   const showConversation = Boolean(chatId)
 
   return (
     <>
       <ChatSidebar
         className="col-start-1 col-end-2 row-start-1 row-end-3"
-        chats={chats}
         activeChatId={chatId}
-        onSelectChat={handleSelectChat}
       />
       <div className="col-start-2 col-end-3 row-start-1 row-end-2 flex min-h-0 flex-1 flex-col">
         {chatData && (
