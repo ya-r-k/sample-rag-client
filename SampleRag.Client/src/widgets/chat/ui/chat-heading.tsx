@@ -1,19 +1,26 @@
 import { cn } from '../../../shared/lib/cn'
-import { ChatDto } from '../../../shared/api/chats'
 import { ShareChatForm } from '../../../features/share-chat/ui/share-chat-form'
+import { useChatsStore } from '../../../shared/store/chats-store'
 import { useTranslation } from 'react-i18next'
+import { useMemo } from 'react'
 
 type ChatHeadingProps = {
-  chat: ChatDto,
+  chatId: string,
   showShare: boolean,
   isDeleting: boolean,
   setShowShare: (show: React.SetStateAction<boolean>) => void,
-  handleDeleteChat: () => void,
+  handleDeleteChat: (chatId: string) => void | Promise<void>,
   className?: string
 }
 
-export function ChatHeading({ chat, showShare, isDeleting, setShowShare, handleDeleteChat, className }: ChatHeadingProps) {
+export function ChatHeading({ chatId, showShare, isDeleting, setShowShare, handleDeleteChat, className }: ChatHeadingProps) {
   const { t } = useTranslation()
+  const chats = useChatsStore((s) => s.chats)
+  const chat = useMemo(
+    () => chats.find((c) => c.id === chatId) ?? null,
+    [chats, chatId],
+  )
+
   return (
     <div className={cn("shrink-0 border-b border-muted py-3 px-4 w-full", className)}>
       <div className="flex items-start justify-between gap-4">
@@ -33,7 +40,7 @@ export function ChatHeading({ chat, showShare, isDeleting, setShowShare, handleD
           </button>
           <button
             type="button"
-            onClick={handleDeleteChat}
+            onClick={() => void handleDeleteChat(chatId)}
             disabled={isDeleting}
             className="inline-flex items-center justify-center rounded-md border border-destructive bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
           >
@@ -42,7 +49,7 @@ export function ChatHeading({ chat, showShare, isDeleting, setShowShare, handleD
         </div>
         {showShare && (
           <div className="w-64">
-            <ShareChatForm chatId={chat.id} />
+            <ShareChatForm chatId={chatId} />
           </div>
         )}
         </div>
