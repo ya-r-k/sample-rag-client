@@ -50,17 +50,26 @@ export function QueryInput({
   return (
     <div className={cn("max-w-3xl w-full bg-white dark:bg-gray-900 outline-none flex items-center border rounded-2xl transition-all duration-75 border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-xl px-4 py-3 gap-2", className)}>
       <form onSubmit={handleSubmit} className='w-full h-full grid grid-cols-[1fr_1fr_1fr] grid-rows-[1fr_auto] gap-y-2'>
-        <textarea
+        <div
           id="user-query-input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          contentEditable={true}
+          suppressContentEditableWarning={true}
+          onInput={(e) => {
+            if (e.currentTarget.innerHTML === '<br>') {
+              e.currentTarget.innerHTML = ''
+            }
+            
+            setText(e.currentTarget.textContent.trim() || '')
+          }}
+          role="textbox"
+          aria-placeholder={effectivePlaceholder}
           aria-label={t('queryInput.ariaLabel')}
-          placeholder={effectivePlaceholder}
-          rows={2}
+          style={{ userSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
           className="col-start-1 col-end-4 row-start-1 row-end-2 my-3
             w-full h-full 
             max-h-[20vh] overflow-y-auto scrollbar-thin scrollbar-track-muted scrollbar-thumb-sky-700
-            placeholder:text-gray-500 dark:placeholder:text-gray-400
+            empty:before:content-[attr(aria-placeholder)] empty:before:text-gray-500 dark:empty:before:text-gray-400 empty:before:pointer-events-none empty:before:select-none
+            placeholder-quieter placeholder:select-none
             bg-transparent text-gray-900
             dark:text-white font-sans text-sm 
             resize-none outline-none selection:bg-blue-200 
