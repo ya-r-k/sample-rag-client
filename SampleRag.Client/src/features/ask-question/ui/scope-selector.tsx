@@ -5,10 +5,13 @@ import {
   ComboboxOption,
   ComboboxOptions,
 } from '@headlessui/react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getScopes } from '../../../shared/api/scopes'
 import { cn } from '../../../shared/lib/cn'
+import { useKnowledgeScopeStore } from '../../../shared/store/knowledge-scope-store'
 
 export type ScopeItem = {
   id: string
@@ -16,7 +19,6 @@ export type ScopeItem = {
 }
 
 type ScopeSelectorProps = {
-  scopes: ScopeItem[]
   value: string | null
   onChange: (scopeId: string | null) => void
   placeholder?: string
@@ -25,7 +27,6 @@ type ScopeSelectorProps = {
 }
 
 export function ScopeSelector({
-  scopes,
   value,
   onChange,
   placeholder,
@@ -34,6 +35,41 @@ export function ScopeSelector({
 }: ScopeSelectorProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
+  const scopes = useKnowledgeScopeStore((s) => s.scopes)
+  const setScopes = useKnowledgeScopeStore((s) => s.setScopes)
+
+  const { data: loadedScopes = [] } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => getScopes(),
+  })
+
+  useEffect(() => {
+    if (!loadedScopes.length && !scopes.length) {
+      return
+    }
+    const sameLength = loadedScopes.length === scopes.length
+    const sameItems =
+      sameLength &&
+      loadedScopes.every(
+        (scope, index) =>
+          scopes[index]?.id === scope.id && scopes[index]?.name === scope.name,
+      )
+    if (!sameItems) {
+      setScopes(loadedScopes)
+    }
+  }, [loadedScopes, scopes, setScopes])
+
+  useEffect(() => {
+    if (!scopes.length) {
+      if (value !== null) {
+        onChange(null)
+      }
+      return
+    }
+    if (!value || !scopes.some((scope) => scope.id === value)) {
+      onChange(scopes[0].id)
+    }
+  }, [scopes, value, onChange])
 
   const filteredScopes =
     query === ''
@@ -42,8 +78,6 @@ export function ScopeSelector({
 
   const selected = scopes.find((s) => s.id === value)
   const effectivePlaceholder = placeholder ?? t('documentsPage.selectScope')
-
-console.log(filteredScopes)
   
   return (
     <Combobox

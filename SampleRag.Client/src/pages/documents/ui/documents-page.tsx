@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getScopes } from '../../../shared/api/scopes'
 import { listDocuments, deleteDocument, uploadDocument, type DocumentDto } from '../../../shared/api/documents'
 import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
@@ -22,11 +21,6 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
   const [editingDocument, setEditingDocument] = useState<DocumentDto | null>(null)
 
   const queryClient = useQueryClient()
-
-  const { data: scopes = [] } = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => getScopes(),
-  })
 
   const { data: documents = [] } = useQuery({
     queryKey: ['documents', { lastId, batchSize }],
@@ -62,15 +56,6 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
   })
-
-  const scopeItems = useMemo(
-    () =>
-      scopes.map((scope) => ({
-        id: scope.id,
-        name: scope.name,
-      })),
-    [scopes],
-  )
 
   if (!isAdmin) {
     return (
@@ -212,7 +197,6 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
             <div className="mt-4 space-y-3">
               {modalMode === 'create' ? (
                 <DocumentForm
-                  scopes={scopeItems}
                   showFileField={true}
                   requireFile={true}
                   requireScope={true}
@@ -232,7 +216,6 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                 />
               ) : (
                 <DocumentForm
-                  scopes={scopeItems}
                   initialName={editingDocument?.name ?? ''}
                   initialScopeId={editingDocument?.scopeId ?? null}
                   showFileField={false}

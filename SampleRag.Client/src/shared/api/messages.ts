@@ -28,7 +28,8 @@ export type SourceDto = {
 
 /** SendMessageRequest — empty guid for new chat (service may create chat and stream first). */
 export type SendMessageRequestBody = {
-  chatId: string | undefined
+  chatId: string | undefined,
+  scopeId: string | undefined,
   text: string
 }
 
@@ -39,11 +40,26 @@ export type SendMessageResponse = {
   sources: SourceDto[]
 }
 
+/** Optional payload for hidden stream UI (reasoning, retrieval, tools). Not merged into MessageDto. */
+export type StreamArtifactEventItem = {
+  type: 'reasoning' | 'retrieval' | 'tool'
+  text?: string
+  payload?: unknown
+  at?: number
+}
+
 export type SendMessageStreamEvent = {
   textDelta?: string
   message?: MessageDto
   chat?: ChatDto
   sources?: SourceDto[]
+  /** Incremental reasoning text (server-specific); not shown as a chat message. */
+  reasoningDelta?: string
+  retrievalDelta?: string
+  /** One structured artifact row from the server. */
+  streamArtifact?: StreamArtifactEventItem
+  /** Batch artifact rows. */
+  streamArtifacts?: StreamArtifactEventItem[]
 }
 
 export type SendMessageOptions = {
@@ -143,6 +159,34 @@ async function parseSSEResponse(
             if (Array.isArray(parsed.sources)) {
               sources = parsed.sources as SendMessageResponse['sources']
               options?.onEvent?.({ sources })
+            }
+            if (typeof parsed.reasoningDelta === 'string') {
+              options?.onEvent?.({ reasoningDelta: parsed.reasoningDelta })
+            }
+            if (typeof parsed.retrievalDelta === 'string') {
+              options?.onEvent?.({ retrievalDelta: parsed.retrievalDelta })
+            }
+            if (
+              parsed.streamArtifact &&
+              typeof parsed.streamArtifact === 'object'
+            ) {
+              options?.onEvent?.({
+                streamArtifact: parsed.streamArtifact as SendMessageStreamEvent['streamArtifact'],
+              })
+            }
+            if (Array.isArray(parsed.artifacts)) {
+              options?.onEvent?.({
+                streamArtifacts: parsed.artifacts as NonNullable<
+                  SendMessageStreamEvent['streamArtifacts']
+                >,
+              })
+            }
+            if (
+              parsed.reasoning &&
+              typeof parsed.reasoning === 'string' &&
+              !parsed.reasoningDelta
+            ) {
+              options?.onEvent?.({ reasoningDelta: parsed.reasoning })
             }
           } catch {
             // ignore non-JSON or partial lines

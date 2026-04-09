@@ -1,0 +1,7 @@
+---
+alwaysApply: false
+---
+
+- For API submission flows, form payload state MUST be managed through a dedicated Zustand store (or feature store) instead of ad-hoc local component state.
+- Submission components should behave as controlled forms bound to store state.
+- New API submission features must define explicit store fields for payload values and use store actions for updates and reset after successful submit.

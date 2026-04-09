@@ -1,13 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getScopes } from '../../../shared/api/scopes'
-import { deleteChat, getChats, type ChatDto } from '../../../shared/api/chats'
+import { deleteChat, getChats } from '../../../shared/api/chats'
 import {
   sendMessage,
   getMessagesFilter,
   type MessageDto,
-  type SourceDto,
+  type SendMessageStreamEvent,
 } from '../../../shared/api/messages'
 import { getDocumentsByIds, type DocumentDto } from '../../../shared/api/documents'
 import { ChatSidebar } from '../../../widgets/chat-sidebar/ui/chat-sidebar'
@@ -16,6 +15,52 @@ import { Spinner } from '../../../shared/ui/spinner'
 import { NewChatBlock } from '../../../widgets/chat/ui/new-chat-block'
 import { CreatedChatInteractionView } from '../../../widgets/chat/ui/created-chat-interaction-view'
 import { useTranslation } from 'react-i18next'
+import { useChatsStore } from '../../../shared/store/chats-store'
+import { useMessagesStore } from '../../../shared/store/messages-store'
+import { useStreamArtifactsStore } from '../../../shared/store/stream-artifacts-store'
+
+const EMPTY_MESSAGES: MessageDto[] = []
+const CHATS_QUERY_KEY = ['chats', 20] as const
+const DEFAULT_SCOPE_ID = 'ec642690-aa62-4c9b-8b9a-dc35badac4cd'
+
+function routeStreamEventToArtifacts(
+  streamChatId: string,
+  turnId: string,
+  event: SendMessageStreamEvent,
+) {
+  const { appendArtifact } = useStreamArtifactsStore.getState()
+  if (event.reasoningDelta) {
+    appendArtifact(streamChatId, turnId, {
+      type: 'reasoning',
+      text: event.reasoningDelta,
+    })
+  }
+  if (event.retrievalDelta) {
+    appendArtifact(streamChatId, turnId, {
+      type: 'retrieval',
+      text: event.retrievalDelta,
+    })
+  }
+  if (event.streamArtifact) {
+    const a = event.streamArtifact
+    appendArtifact(streamChatId, turnId, {
+      type: a.type,
+      text: a.text,
+      payload: a.payload,
+      at: a.at,
+    })
+  }
+  if (event.streamArtifacts) {
+    for (const a of event.streamArtifacts) {
+      appendArtifact(streamChatId, turnId, {
+        type: a.type,
+        text: a.text,
+        payload: a.payload,
+        at: a.at,
+      })
+    }
+  }
+}
 
 export function ChatPage() {
   const { t } = useTranslation()
@@ -26,37 +71,49 @@ export function ChatPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [hasDocuments] = useState(true)
-  /** Optimistic thread on /chats before the server returns chat id */
-  const [draftMessages, setDraftMessages] = useState<MessageDto[] | null>(null)
+  const [selectedScopeId, setSelectedScopeId] = useState<string | null>(DEFAULT_SCOPE_ID)
 
-  useEffect(() => {
-    if (chatId) {
-      setDraftMessages(null)
-    }
-  }, [chatId])
-
-  const { data: scopes = [], isLoading: scopesLoading } = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => getScopes(),
-  })
-
-  const { data: chats = [], isLoading: chatsLoading } = useQuery({
-    queryKey: ['chats', 20],
-    queryFn: () => getChats({ batchSize: 20 }),
-  })
-  const chatData = useMemo(
-    () => (chatId ? chats.find((c) => c.id === chatId) : null),
-    [chats, chatId],
+  const chats = useChatsStore((s) => s.chats)
+  const displayMessages = useMessagesStore((s) =>
+    chatId ? (s.byChatId[chatId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES,
   )
 
-  const { data: messages = [] } = useQuery({
+  const {
+    data: chatsQueryData,
+    dataUpdatedAt: chatsDataUpdatedAt,
+    isLoading: chatsLoading,
+  } = useQuery({
+    queryKey: CHATS_QUERY_KEY,
+    queryFn: () => getChats({ batchSize: 20 }),
+  })
+
+  useEffect(() => {
+    if (chatsQueryData !== undefined) {
+      useChatsStore.getState().mergeChatsFromServer(chatsQueryData)
+    }
+  }, [chatsQueryData, chatsDataUpdatedAt])
+
+  const {
+    data: messagesQueryData,
+    dataUpdatedAt: messagesDataUpdatedAt,
+  } = useQuery({
     queryKey: ['chat-messages', chatId],
     queryFn: () => getMessagesFilter({ chatId: chatId ?? undefined, batchSize: 30 }),
-    // While sending, rely on cache updates from streaming / optimistic updates (avoid overwriting with a stale filter).
     enabled: !!chatId && !isSubmitting,
   })
 
-  const displayMessages: MessageDto[] = chatId ? messages : (draftMessages ?? [])
+  useEffect(() => {
+    if (!chatId || isSubmitting || messagesQueryData === undefined) {
+      return
+    }
+    useMessagesStore.getState().setMessagesForChat(chatId, messagesQueryData)
+    useChatsStore.getState().setChatLastLoadedAt(chatId, Date.now())
+  }, [chatId, messagesQueryData, messagesDataUpdatedAt, isSubmitting])
+
+  const chatData = useMemo(
+    () => (chatId ? chats.find((c) => c.id === chatId) ?? null : null),
+    [chats, chatId],
+  )
 
   const documentIds = useMemo(() => {
     const set = new Set<string>()
@@ -79,6 +136,15 @@ export function ChatPage() {
     () => Object.fromEntries(loadedDocuments.map((d: DocumentDto) => [d.id, d])),
     [loadedDocuments],
   )
+  useEffect(() => {
+    if (chatData?.scopeId) {
+      setSelectedScopeId(chatData.scopeId)
+      return
+    }
+    if (!chatId) {
+      setSelectedScopeId(DEFAULT_SCOPE_ID)
+    }
+  }, [chatData?.scopeId, chatId])
 
   const handleSelectChat = useCallback(
     (id: string) => {
@@ -88,154 +154,144 @@ export function ChatPage() {
   )
 
   const handleSubmit = useCallback(
-    async (text: string) => {
+    async (text: string, pickedScopeId: string | null) => {
       if (isSubmitting) return
       if (!hasDocuments && !chatId) return
+      const nextScopeId = pickedScopeId ?? selectedScopeId ?? DEFAULT_SCOPE_ID
+
+      const chatsStore = useChatsStore.getState()
+      const messagesStore = useMessagesStore.getState()
+      const artifactsStore = useStreamArtifactsStore.getState()
 
       setIsSubmitting(true)
-      let streamedChatId = chatId
-      const userItem: MessageDto = { text, aiGenerated: false }
-      const assistantItem: MessageDto = { text: '', aiGenerated: true, sourceReferences: [] }
+      const optimisticChatId = !chatId ? crypto.randomUUID() : null
+      let streamChatId = chatId ?? optimisticChatId!
+      const streamChatIdRef = { current: streamChatId }
+      const optimisticResolvedRef = { current: false }
+      const turnId = crypto.randomUUID()
 
-      const upsertChatInSidebar = (chat: ChatDto) => {
-        queryClient.setQueryData<ChatDto[]>(['chats', 20], (prev) => {
-          const next = prev ? [...prev] : []
-          const existingIndex = next.findIndex((item) => item.id === chat.id)
-          if (existingIndex >= 0) {
-            next[existingIndex] = chat
-            return next
-          }
-          return [chat, ...next]
-        })
-      }
+      artifactsStore.startTurn(streamChatId, turnId)
 
-      const ensureAssistantMessage = (items: MessageDto[], targetChatId: string) => {
-        const next = [...items]
-        if (next.length === 0) {
-          next.push({ ...userItem, chatId: targetChatId })
-        }
-        const assistantIndex = next.findIndex((item) => item.aiGenerated === true && !item.id)
-        if (assistantIndex >= 0) {
-          return { next, assistantIndex }
-        }
-        next.push({ ...assistantItem, chatId: targetChatId })
-        return { next, assistantIndex: next.length - 1 }
-      }
-
-      if (!chatId) {
-        setDraftMessages([
-          { ...userItem },
-          { ...assistantItem },
-        ])
+      if (optimisticChatId) {
+        const title =
+          text.trim().slice(0, 80) || t('chat.newChatName')
+        chatsStore.upsertChat(
+          {
+            id: optimisticChatId,
+            name: title,
+            scopeId: nextScopeId,
+            ownerIds: [],
+          },
+          { clientOptimistic: true },
+        )
+        messagesStore.setOptimisticTurn(optimisticChatId, text)
+        navigate(`/chats/${optimisticChatId}`, { replace: true })
       }
 
       try {
         if (chatId) {
-          queryClient.setQueryData<MessageDto[]>(['chat-messages', chatId], (prev) => [
-            ...(prev ?? []),
-            { ...userItem, chatId },
-            { ...assistantItem, chatId },
-          ])
+          messagesStore.appendUserAndAssistantPlaceholders(chatId, text)
         }
 
         const result = await sendMessage(
           {
             chatId: chatId ?? undefined,
+            scopeId: nextScopeId,
             text,
           },
           {
             onEvent: (event) => {
+              routeStreamEventToArtifacts(streamChatIdRef.current, turnId, event)
+
               if (event.chat) {
                 const eventChatId = event.chat.id
-                streamedChatId = eventChatId
-                upsertChatInSidebar(event.chat)
+                streamChatId = eventChatId
+                streamChatIdRef.current = eventChatId
 
-                queryClient.setQueryData<MessageDto[]>(['chat-messages', eventChatId], (prev) => {
-                  const base = prev ?? []
-                  if (base.length > 0) {
-                    return base
-                  }
-                  return [
-                    { ...userItem, chatId: eventChatId },
-                    { ...assistantItem, chatId: eventChatId },
-                  ]
-                })
-
-                if (!chatId) {
+                if (optimisticChatId) {
+                  optimisticResolvedRef.current = true
+                  chatsStore.replaceChatId(optimisticChatId, event.chat)
+                  messagesStore.renameChatId(optimisticChatId, eventChatId)
+                  artifactsStore.rebindTurnChatId(
+                    optimisticChatId,
+                    eventChatId,
+                    turnId,
+                  )
                   navigate(`/chats/${eventChatId}`, { replace: true })
+                } else {
+                  chatsStore.upsertChat(event.chat)
                 }
+
+                messagesStore.seedMessagesIfEmpty(eventChatId, text)
               }
 
-              const targetChatId = streamedChatId ?? chatId
-              if (!targetChatId || (!event.textDelta && !event.sources && !event.message)) {
+              const targetChatId = streamChatIdRef.current
+              if (
+                !targetChatId ||
+                (!event.textDelta &&
+                  !event.sources &&
+                  !event.message &&
+                  !event.reasoningDelta &&
+                  !event.retrievalDelta &&
+                  !event.streamArtifact &&
+                  !event.streamArtifacts)
+              ) {
                 return
               }
 
-              queryClient.setQueryData<MessageDto[]>(['chat-messages', targetChatId], (prev) => {
-                const { next, assistantIndex } = ensureAssistantMessage(prev ?? [], targetChatId)
-                const currentAssistant = next[assistantIndex]
-                const currentText = currentAssistant.text ?? ''
-                const nextTextFromMessage = event.message?.text ?? currentText
-                const mergedText = event.textDelta ? `${currentText}${event.textDelta}` : nextTextFromMessage
-
-                next[assistantIndex] = {
-                  ...currentAssistant,
-                  ...(event.message ?? {}),
-                  chatId: targetChatId,
-                  aiGenerated: true,
-                  text: mergedText,
-                  sourceReferences: event.message?.sourceReferences,
-                }
-                return next
-              })
+              if (
+                event.textDelta ||
+                event.sources ||
+                event.message
+              ) {
+                messagesStore.applyStreamEvent(targetChatId, event, text)
+              }
             },
           },
         )
 
-        const resolvedChatId = result.chat?.id ?? streamedChatId
-        if (result.chat) {
-          upsertChatInSidebar(result.chat)
+        if (
+          optimisticChatId &&
+          result.chat?.id &&
+          !optimisticResolvedRef.current
+        ) {
+          const realId = result.chat.id
+          chatsStore.replaceChatId(optimisticChatId, result.chat)
+          messagesStore.renameChatId(optimisticChatId, realId)
+          artifactsStore.rebindTurnChatId(optimisticChatId, realId, turnId)
+          streamChatIdRef.current = realId
+          navigate(`/chats/${realId}`, { replace: true })
         }
-        if (!chatId && result.chat?.id) {
+
+        const streamedChatId = result.chat?.id ?? streamChatIdRef.current
+        if (result.chat) {
+          chatsStore.upsertChat(result.chat)
+        }
+        if (!chatId && result.chat?.id && !optimisticChatId) {
           navigate(`/chats/${result.chat.id}`, { replace: true })
         }
-        if (resolvedChatId) {
-          queryClient.setQueryData<MessageDto[]>(['chat-messages', resolvedChatId], (prev) => {
-            const { next, assistantIndex } = ensureAssistantMessage(prev ?? [], resolvedChatId)
-            const mergedRefs =
-              result.sources?.length
-                ? result.sources
-                : result.message.sourceReferences ?? result.message.sources
-            next[assistantIndex] = {
-              ...next[assistantIndex],
-              ...result.message,
-              chatId: resolvedChatId,
-              aiGenerated: true,
-              text: result.answer || next[assistantIndex].text,
-              sourceReferences:
-                mergedRefs && mergedRefs.length > 0
-                  ? mergedRefs
-                  : next[assistantIndex].sourceReferences,
-            }
-            return next
-          })
+        if (streamedChatId) {
+          messagesStore.finalizeSendResponse(streamedChatId, result)
         }
+
+        artifactsStore.clearTurn(streamChatIdRef.current, turnId)
       } catch (err) {
         console.error('Send message failed:', err)
-        if (!chatId) {
-          setDraftMessages(null)
+        artifactsStore.clearTurn(streamChatIdRef.current, turnId)
+        if (optimisticChatId) {
+          chatsStore.removeChat(optimisticChatId)
+          messagesStore.removeMessagesForChat(optimisticChatId)
+          artifactsStore.clearChatArtifacts(optimisticChatId)
+          navigate('/chats', { replace: true })
         }
       } finally {
         setIsSubmitting(false)
       }
     },
-    [chatId, hasDocuments, isSubmitting, queryClient, navigate],
+    [chatId, hasDocuments, isSubmitting, navigate, selectedScopeId, t],
   )
 
-  const canSubmit =
-    (!scopesLoading && scopes.length > 0) &&
-    !isSubmitting &&
-    !isDeleting
+  const canSubmit = !isSubmitting && !isDeleting
 
   const handleDeleteChat = useCallback(async () => {
     if (!chatId) {
@@ -248,9 +304,12 @@ export function ChatPage() {
     setIsDeleting(true)
     try {
       await deleteChat(chatId)
-      queryClient.invalidateQueries({ queryKey: ['chats', 20] })
+      queryClient.invalidateQueries({ queryKey: CHATS_QUERY_KEY })
       queryClient.removeQueries({ queryKey: ['chat', chatId] })
       queryClient.removeQueries({ queryKey: ['chat-messages', chatId] })
+      useChatsStore.getState().removeChat(chatId)
+      useMessagesStore.getState().removeMessagesForChat(chatId)
+      useStreamArtifactsStore.getState().clearChatArtifacts(chatId)
       navigate('/chats')
     } catch (error) {
       console.error('Delete chat failed:', error)
@@ -267,8 +326,7 @@ export function ChatPage() {
     )
   }
 
-  const showConversation =
-    Boolean(chatId) || Boolean(draftMessages && draftMessages.length > 0)
+  const showConversation = Boolean(chatId)
 
   return (
     <>
@@ -291,9 +349,12 @@ export function ChatPage() {
         )}
         {showConversation && (
           <CreatedChatInteractionView
+            chatId={chatId!}
             messages={displayMessages}
             documentsById={documentsById}
             handleSubmit={handleSubmit}
+            scopeId={selectedScopeId}
+            onScopeIdChange={setSelectedScopeId}
             canSubmit={canSubmit}
             isSubmitting={isSubmitting}
           />
@@ -301,6 +362,8 @@ export function ChatPage() {
         {!showConversation && (
           <NewChatBlock
             handleSubmit={handleSubmit}
+            scopeId={selectedScopeId}
+            onScopeIdChange={setSelectedScopeId}
             canSubmit={canSubmit}
             isSubmitting={isSubmitting}
             hasDocuments={hasDocuments}

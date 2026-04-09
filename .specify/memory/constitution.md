@@ -40,6 +40,8 @@ react-i18next v15+ with i18next v24+. Lazy-load JSON files per language. Languag
 
 Zustand v5+ with persist middleware for global UI state (active chat, theme, filters, modals). TanStack Query caches server data (messages, users). localStorage for settings (theme, language). idb-keyval ONLY for offline form drafts and unsent messages.
 
+All API submission forms MUST be controlled through a dedicated Zustand store object for that form payload (for example: `chatId`, `scopeId`, `text`). Form components must not keep submission payload state only in local component state when the payload is used for API submissions.
+
 ### VII. UI & Styling
 
 Tailwind CSS v3.4+ and SCSS preprocessor with CSS Variables for theming. shadcn/ui for components, Headless UI for primitives, Lucide React for icons. Dark/light/system themes via CSS vars + Zustand store with prefers-color-scheme auto-detection.
@@ -47,6 +49,8 @@ Tailwind CSS v3.4+ and SCSS preprocessor with CSS Variables for theming. shadcn/
 Create and edit forms for the same entity MUST be implemented as one reusable component with configurable props for field visibility and validation requirements (required/optional fields).
 
 Any destructive action (delete/remove) MUST require explicit user confirmation before API call or state mutation. Immediate deletion on single click without confirmation is forbidden.
+
+Combobox components MUST load and manage their option collections internally (through store/query) instead of receiving option collections from parent components via props.
 
 ### VIII. License & Dependencies
 
@@ -73,4 +77,4 @@ Feature-Sliced Design (FSD). Source structure MUST follow FSD layers: app, pages
 
 Constitution supersedes all other practices. Amendments require documentation, approval, and migration plan. All PRs and reviews MUST verify compliance with principles. Complexity MUST be justified. Use this constitution for runtime development guidance.
 
-**Version**: 1.0.0 | **Ratified**: 2025-02-15 | **Last Amended**: 2025-02-15
+**Version**: 1.1.0 | **Ratified**: 2025-02-15 | **Last Amended**: 2026-04-09

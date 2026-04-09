@@ -1,0 +1,7 @@
+---
+alwaysApply: false
+---
+
+- New combobox components MUST manage loading of option collections themselves (store/query inside the combobox or its own feature scope), not via parent-provided option arrays.
+- Parent components should only control selected value and selection callbacks when needed.
+- Keep combobox option loading logic colocated with the combobox component or a dedicated store used by that combobox.

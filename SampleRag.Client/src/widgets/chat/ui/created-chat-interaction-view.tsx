@@ -8,18 +8,24 @@ import { useTranslation } from 'react-i18next'
 
 type CreatedChatInteractionViewProps = {
   className?: string
+  chatId: string
   messages: MessageDto[]
   documentsById?: Record<string, DocumentDto>
-  handleSubmit: (text: string) => void
+  handleSubmit: (text: string, scopeId: string | null) => void
+  scopeId: string | null
+  onScopeIdChange: (scopeId: string | null) => void
   canSubmit: boolean
   isSubmitting: boolean
 }
 
 export function CreatedChatInteractionView({
   className,
+  chatId,
   messages,
   documentsById,
   handleSubmit,
+  scopeId,
+  onScopeIdChange,
   canSubmit,
   isSubmitting,
 }: CreatedChatInteractionViewProps) {
@@ -30,6 +36,9 @@ export function CreatedChatInteractionView({
       <div className="mb-3 mt-auto flex w-full shrink-0 flex-col items-center justify-center shadow-sm dark:shadow-md">
         <QueryInput
           onSubmit={handleSubmit}
+          chatId={chatId}
+          scopeId={scopeId}
+          onScopeIdChange={onScopeIdChange}
           disabled={!canSubmit || isSubmitting}
           placeholder={isSubmitting ? t('chat.placeholderSending') : t('chat.placeholderClarify')}
         />
