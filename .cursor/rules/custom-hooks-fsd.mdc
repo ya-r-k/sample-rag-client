@@ -1,0 +1,35 @@
+---
+description: "Extract complex component hook logic into one FSD custom hook"
+globs:
+  - "SampleRag.Client/src/features/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/pages/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/widgets/**/ui/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Complex Hook Extraction Rule (FSD + React + Query + Zustand)
+
+## When extraction is mandatory
+- If a component has complex hook-heavy logic, extract it into ONE custom hook and keep the component focused on rendering.
+- Treat logic as complex when any of these is true:
+  - 2+ `useEffect` blocks, or
+  - 3+ React hooks (`useState`, `useMemo`, `useCallback`, `useRef`, `useEffect`) combined with async/store synchronization, or
+  - Query/load + store sync + filter/select/reset behavior all inside the component.
+
+## What to extract
+- Move all related stateful behavior (querying, local state, derived filtering, selection synchronization, resets, side effects) into one domain hook.
+- Component should mostly consume a compact hook API:
+  - Inputs: value, callbacks, optional params.
+  - Outputs: data/options, loading/error flags, derived values, event handlers.
+
+## FSD placement rules for this project
+- Default location: `SampleRag.Client/src/features/<feature>/lib/use<Feature><Entity>.ts`.
+- If `lib` folder does not exist in that feature, create it.
+- If the same hook is reused by multiple features without feature-specific dependencies, move to `SampleRag.Client/src/shared/lib/hooks/use<Domain>.ts`.
+- Do not place complex orchestration hooks directly in `ui` files.
+
+## Naming and quality
+- Hook names must be explicit and domain-oriented (`useScopeSelector`, `useUploadDocumentForm`, `useChatComposer`).
+- Keep hook return type stable and minimal; expose behavior, not implementation internals.
+- Prefer typed inputs/outputs; use generics only when the hook is genuinely reusable.
+- Avoid duplication: when a component reaches the complexity criteria above, extraction is required.
