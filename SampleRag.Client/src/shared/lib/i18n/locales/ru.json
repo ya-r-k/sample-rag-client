@@ -62,11 +62,22 @@
     "currentTime": "Определение текущего времени",
     "unknownTool": "Вызов инструмента",
     "callDetails": "Параметры вызова",
+    "searchRequest": "Запрос поиска",
+    "searchQuery": "Запрос",
+    "searchOutcomeIntro": "Что вернул поиск (в удобном виде):",
+    "callContext": "Контекст запроса",
+    "callParameters": "Параметры — {{tool}}",
+    "additionalParameters": "Дополнительные параметры",
     "knowledgeScope": "Область знаний",
     "autoScope": "Автоматический выбор области",
     "yes": "Да",
     "no": "Нет",
-    "toolResult": "Результат"
+    "toolResult": "Результат",
+    "emptyValue": "Нет значения",
+    "emptyList": "Нет элементов",
+    "truncated": "…",
+    "andMoreItems": "… и ещё {{count}}",
+    "resultPage": "Стр. {{page}}"
   },
   "common": {
     "mainNavigation": "Основная навигация",

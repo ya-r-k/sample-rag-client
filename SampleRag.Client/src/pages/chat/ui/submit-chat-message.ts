@@ -114,8 +114,12 @@ export async function submitChatMessage(
 
     if (resolvedChatId) {
       messagesStore.finalizeSendResponse(resolvedChatId, result)
-      if (result.message?.id) {
-        generationStepsStore.commitTurnToMessage(turnId, result.message.id)
+      const messagesAfter = useMessagesStore.getState().byChatId[resolvedChatId] ?? []
+      const assistantMessageId =
+        result.message?.id ??
+        [...messagesAfter].reverse().find((m) => m.aiGenerated)?.id
+      if (assistantMessageId) {
+        generationStepsStore.commitTurnToMessage(turnId, assistantMessageId)
       } else {
         generationStepsStore.clearTurn(turnId)
       }

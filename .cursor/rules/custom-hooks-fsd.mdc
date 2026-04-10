@@ -16,6 +16,8 @@ alwaysApply: false
   - 2+ `useEffect` blocks, or
   - 3+ React hooks (`useState`, `useMemo`, `useCallback`, `useRef`, `useEffect`) combined with async/store synchronization, or
   - Query/load + store sync + filter/select/reset behavior all inside the component.
+- **Count toward the hook total** (for the 3+ threshold): `useTranslation`, `useParams`, `useNavigate`, and similar framework hooks—not only `useState`/`useEffect`.
+- If a hook is **imported by a parent/sibling** (e.g. resolving Zustand state for a list item), it MUST live in its own **`use-<domain>.hook.ts`** file in the same folder, not inside the child presentation component’s module.
 
 ## What to extract
 - Move all related stateful behavior (querying, local state, derived filtering, selection synchronization, resets, side effects) into one domain hook.
@@ -26,6 +28,7 @@ alwaysApply: false
 ## Placement and file naming (this project)
 - Colocate the hook with its UI component in the same folder.
 - Name the file `<component-name>.hook.ts` (e.g. `query-input.hook.ts` exporting `useQueryInput`).
+- Hooks primarily tied to one component but named with a **`use` prefix** (e.g. `useStepsForAssistantMessage`) may use **`use-<slug>.hook.ts`** in that folder so parents can import them without pulling the whole child component file.
 - If the same hook is reused by multiple features without feature-specific dependencies, move to `SampleRag.Client/src/shared/lib/hooks/use<Domain>.ts` and keep the `use*` file name there.
 - Do not leave complex orchestration inline in the `.tsx` file when the criteria above apply.
 
