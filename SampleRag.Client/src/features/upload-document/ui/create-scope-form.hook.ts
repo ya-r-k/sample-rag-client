@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { createScope } from '../../../shared/api/scopes'
@@ -23,7 +23,7 @@ export function useCreateScopeForm() {
   })
 
   const handleSubmit = useCallback(
-    (event: FormEvent) => {
+    (event: SubmitEvent) => {
       event.preventDefault()
       const value = name.trim()
       if (!value || mutation.isPending) return

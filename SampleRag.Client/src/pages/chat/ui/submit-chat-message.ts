@@ -8,38 +8,35 @@ import { useChatsStore } from '../../../shared/store/chats-store'
 import { useMessagesStore } from '../../../shared/store/messages-store'
 import { useStreamArtifactsStore } from '../../../shared/store/stream-artifacts-store'
 
-const DEFAULT_SCOPE_ID = 'ec642690-aa62-4c9b-8b9a-dc35badac4cd'
-
 export type ChatPageSubmitDeps = {
   isSubmitting: boolean
   hasDocuments: boolean
   setIsSubmitting: (value: boolean) => void
   navigate: NavigateFunction
   t: TFunction
-  routeChatId: string | undefined
 }
 
 function routeStreamEventToArtifacts(
-  streamChatId: string,
+  chatId: string,
   turnId: string,
   event: SendMessageStreamEvent,
 ) {
   const { appendArtifact } = useStreamArtifactsStore.getState()
   if (event.reasoningDelta) {
-    appendArtifact(streamChatId, turnId, {
+    appendArtifact(chatId, turnId, {
       type: 'reasoning',
       text: event.reasoningDelta,
     })
   }
   if (event.retrievalDelta) {
-    appendArtifact(streamChatId, turnId, {
+    appendArtifact(chatId, turnId, {
       type: 'retrieval',
       text: event.retrievalDelta,
     })
   }
   if (event.streamArtifact) {
     const a = event.streamArtifact
-    appendArtifact(streamChatId, turnId, {
+    appendArtifact(chatId, turnId, {
       type: a.type,
       text: a.text,
       payload: a.payload,
@@ -48,7 +45,7 @@ function routeStreamEventToArtifacts(
   }
   if (event.streamArtifacts) {
     for (const a of event.streamArtifacts) {
-      appendArtifact(streamChatId, turnId, {
+      appendArtifact(chatId, turnId, {
         type: a.type,
         text: a.text,
         payload: a.payload,
@@ -60,8 +57,8 @@ function routeStreamEventToArtifacts(
 
 export async function submitChatMessage(
   deps: ChatPageSubmitDeps,
-  currentChatId: string | null,
-  pickedScopeId: string | null,
+  chatId: string | null,
+  scopeId: string | null,
   text: string,
 ): Promise<void> {
   const {
@@ -70,75 +67,54 @@ export async function submitChatMessage(
     setIsSubmitting,
     navigate,
     t,
-    routeChatId,
   } = deps
 
   if (isSubmitting) return
-  if (!hasDocuments && !currentChatId) return
-  const nextScopeId = pickedScopeId ?? DEFAULT_SCOPE_ID
+  if (!hasDocuments && !chatId) return
+  if (!scopeId) return
 
   const chatsStore = useChatsStore.getState()
   const messagesStore = useMessagesStore.getState()
   const artifactsStore = useStreamArtifactsStore.getState()
 
   setIsSubmitting(true)
-  const optimisticChatId = !currentChatId ? crypto.randomUUID() : null
-  let streamChatId = currentChatId ?? optimisticChatId!
-  const streamChatIdRef = { current: streamChatId }
-  const optimisticResolvedRef = { current: false }
+  let resolvedChatId = chatId
   const turnId = crypto.randomUUID()
-
-  artifactsStore.startTurn(streamChatId, turnId)
-
-  if (optimisticChatId) {
-    const title = text.trim().slice(0, 80) || t('chat.newChatName')
-    chatsStore.upsertChat(
-      {
-        id: optimisticChatId,
-        name: title,
-        scopeId: nextScopeId,
-        ownerIds: [],
-      },
-      { clientOptimistic: true },
-    )
-    messagesStore.setOptimisticTurn(optimisticChatId, text)
-    navigate(`/chats/${optimisticChatId}`, { replace: true })
+  if (resolvedChatId) {
+    artifactsStore.startTurn(resolvedChatId, turnId)
   }
 
   try {
-    if (currentChatId) {
-      messagesStore.appendUserAndAssistantPlaceholders(currentChatId, text)
+    if (chatId) {
+      messagesStore.appendUserAndAssistantPlaceholders(chatId, text)
     }
 
     const result = await sendMessage(
       {
-        chatId: currentChatId ?? undefined,
-        scopeId: nextScopeId,
+        chatId: chatId ?? undefined,
+        scopeId,
         text,
       },
       {
         onEvent: (event) => {
-          routeStreamEventToArtifacts(streamChatIdRef.current, turnId, event)
 
+          console.log(resolvedChatId)
+          console.log(event)
           if (event.chat) {
             const eventChatId = event.chat.id
-            streamChatId = eventChatId
-            streamChatIdRef.current = eventChatId
+            const hadNoChatId = !resolvedChatId
+            resolvedChatId = eventChatId
 
-            if (optimisticChatId) {
-              optimisticResolvedRef.current = true
-              chatsStore.replaceChatId(optimisticChatId, event.chat)
-              messagesStore.renameChatId(optimisticChatId, eventChatId)
-              artifactsStore.rebindTurnChatId(optimisticChatId, eventChatId, turnId)
+            if (hadNoChatId) {
+              artifactsStore.startTurn(eventChatId, turnId)
               navigate(`/chats/${eventChatId}`, { replace: true })
-            } else {
-              chatsStore.upsertChat(event.chat)
             }
+            chatsStore.upsertChat(event.chat)
 
             messagesStore.seedMessagesIfEmpty(eventChatId, text)
           }
 
-          const targetChatId = streamChatIdRef.current
+          const targetChatId = resolvedChatId
           if (
             !targetChatId ||
             (!event.textDelta &&
@@ -151,6 +127,7 @@ export async function submitChatMessage(
           ) {
             return
           }
+          routeStreamEventToArtifacts(targetChatId, turnId, event)
 
           if (event.textDelta || event.sources || event.message) {
             messagesStore.applyStreamEvent(targetChatId, event, text)
@@ -159,41 +136,28 @@ export async function submitChatMessage(
       },
     )
 
-    if (
-      optimisticChatId &&
-      result.chat?.id &&
-      !optimisticResolvedRef.current
-    ) {
-      const realId = result.chat.id
-      chatsStore.replaceChatId(optimisticChatId, result.chat)
-      messagesStore.renameChatId(optimisticChatId, realId)
-      artifactsStore.rebindTurnChatId(optimisticChatId, realId, turnId)
-      streamChatIdRef.current = realId
-      navigate(`/chats/${realId}`, { replace: true })
-    }
-
-    const streamedChatId = result.chat?.id ?? streamChatIdRef.current
+    const streamedChatId = result.chat?.id ?? resolvedChatId
     if (result.chat) {
+      resolvedChatId = result.chat.id
       chatsStore.upsertChat(result.chat)
     }
-    if (!routeChatId && result.chat?.id && !optimisticChatId) {
+    if (!chatId && result.chat?.id) {
       navigate(`/chats/${result.chat.id}`, { replace: true })
     }
     if (streamedChatId) {
       messagesStore.finalizeSendResponse(streamedChatId, result)
     }
 
-    artifactsStore.clearTurn(streamChatIdRef.current, turnId)
+    if (resolvedChatId) {
+      artifactsStore.clearTurn(resolvedChatId, turnId)
+    }
   } catch (err) {
     console.error('Send message failed:', err)
-    artifactsStore.clearTurn(streamChatIdRef.current, turnId)
-    if (optimisticChatId) {
-      chatsStore.removeChat(optimisticChatId)
-      messagesStore.removeMessagesForChat(optimisticChatId)
-      artifactsStore.clearChatArtifacts(optimisticChatId)
-      navigate('/chats', { replace: true })
+    if (resolvedChatId) {
+      artifactsStore.clearTurn(resolvedChatId, turnId)
     }
   } finally {
     setIsSubmitting(false)
+    void t
   }
 }

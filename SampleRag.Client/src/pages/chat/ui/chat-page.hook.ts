@@ -65,7 +65,7 @@ export function useChatPage() {
   )
 
   const handleSubmit = useCallback(
-    (currentChatId: string | null, pickedScopeId: string | null, text: string) =>
+    (chatId: string | null, scopeId: string | null, text: string) =>
       submitChatMessage(
         {
           isSubmitting,
@@ -73,13 +73,12 @@ export function useChatPage() {
           setIsSubmitting,
           navigate,
           t,
-          routeChatId: chatId,
         },
-        currentChatId,
-        pickedScopeId,
+        chatId,
+        scopeId,
         text,
       ),
-    [chatId, hasDocuments, isSubmitting, navigate, t],
+    [hasDocuments, isSubmitting, navigate, t],
   )
 
   const handleDeleteChat = useCallback(

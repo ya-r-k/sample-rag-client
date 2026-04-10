@@ -12,6 +12,7 @@ export function QueryInput(props: QueryInputProps) {
     effectivePlaceholder,
     scopeId,
     setScopeId,
+    isScopeInvalid,
     handleSubmit,
     handleContentInput,
     disabled,
@@ -54,7 +55,12 @@ export function QueryInput(props: QueryInputProps) {
             dark:selection:bg-blue-800/20 
             p-0 min-h-[2.5rem]"
         />
-        <div className="col-start-1 col-end-3 row-start-2 row-end-3 w-full h-full flex justify-start pr-2">
+        <div
+          className={cn(
+            'col-start-1 col-end-3 row-start-2 row-end-3 w-full h-full flex justify-start pr-2 rounded-md transition-colors',
+            isScopeInvalid && 'ring-1 ring-red-500',
+          )}
+        >
           <ScopeSelector
             value={scopeId}
             onChange={setScopeId}
@@ -68,7 +74,7 @@ export function QueryInput(props: QueryInputProps) {
           <Button
             className="transition-all duration-200 rounded-full aspect-square flex items-center justify-center h-7 w-7 shrink-0 bg-white text-gray-900"
             type="submit"
-            disabled={!text.trim() || !scopeId}
+            disabled={!text.trim() || disabled}
             aria-label={t('queryInput.sendAriaLabel')}
           >
             <ArrowUp className="w-3 h-3" />

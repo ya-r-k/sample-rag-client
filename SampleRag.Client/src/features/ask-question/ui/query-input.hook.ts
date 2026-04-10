@@ -4,8 +4,6 @@ import { useMessageSubmissionStore } from '../../../shared/store/message-submiss
 import { useChatsStore } from '../../../shared/store/chats-store'
 import { QueryInputProps } from './query-input.props'
 
-export const DEFAULT_SCOPE_ID = 'ec642690-aa62-4c9b-8b9a-dc35badac4cd'
-
 const ESTIMATED_DROPDOWN_PX = 240
 
 export function useQueryInput({
@@ -26,7 +24,8 @@ export function useQueryInput({
     [chats, chatId],
   )
 
-  const [scopeId, setScopeId] = useState<string | null>(DEFAULT_SCOPE_ID)
+  const [scopeId, setScopeId] = useState<string | null>(null)
+  const [isScopeInvalid, setIsScopeInvalid] = useState(false)
   const [flipOptionsUp, setFlipOptionsUp] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
@@ -40,10 +39,10 @@ export function useQueryInput({
   }, [chatScopeId])
 
   useEffect(() => {
-    if (!chatId) {
-      setScopeId(DEFAULT_SCOPE_ID)
+    if (scopeId) {
+      setIsScopeInvalid(false)
     }
-  }, [chatId])
+  }, [scopeId])
 
   useEffect(() => {
     setForm({ chatId, scopeId })
@@ -82,16 +81,21 @@ export function useQueryInput({
   )
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
+    (e: React.SubmitEvent) => {
       e.preventDefault()
       const trimmed = text.trim()
-      if (trimmed && !disabled) {
-        onSubmit(chatId ?? null, scopeId, trimmed)
-        setText('')
-        const ed = editorRef.current
-        if (ed) {
-          ed.textContent = ''
-        }
+      if (!trimmed || disabled) {
+        return
+      }
+      if (!scopeId) {
+        setIsScopeInvalid(true)
+        return
+      }
+      onSubmit(chatId ?? null, scopeId, trimmed)
+      setText('')
+      const ed = editorRef.current
+      if (ed) {
+        ed.textContent = ''
       }
     },
     [text, disabled, onSubmit, chatId, scopeId, setText],
@@ -103,6 +107,7 @@ export function useQueryInput({
     effectivePlaceholder,
     scopeId,
     setScopeId,
+    isScopeInvalid,
     handleSubmit,
     handleContentInput,
     disabled,
