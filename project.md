@@ -1,228 +1,276 @@
-# Анализ фронтенд кодовой базы: Sample RAG Client
+# Project deep-dive: Sample RAG Client
 
-**Проект**: RAG Chat Client (клиент для AI-powered Q&A с документами)  
-**Репозиторий**: sample-rag-client  
-**Текущее состояние**: Ранняя стадия — настроена инфраструктура (Vite, TypeScript, ESLint), задекларирована структура папок, спецификация и план реализации готовы; **исходный код приложения (компоненты, страницы, API-слой) в репозитории отсутствует** — точка входа `src/main.tsx` указана в `index.html`, но файл не представлен в анализируемой кодовой базе.
+## Backend & API context
+
+The browser client talks to a **separate HTTP API** (not shipped in this repository). **Repository name for the server is not specified by the maintainer in this session.**
+
+Evidence in-repo:
+
+- Default base URL **`http://localhost:5234`** (`Dockerfile`, `README.md`, `docker-entrypoint.sh`, `Scripts/docker.run-client.bat`).
+- API modules are documented as aligned with a **“Demo RAG API”** style contract (`src/shared/api/*.ts`).
+- Streaming payloads for `POST /api/messages` are described as matching a **C# `MessagePartResponse` DTO** (camelCase JSON over SSE); see **POST /api/messages — SSE contract** at the end of this document.
+
+Authentication is **Bearer JWT**: the client obtains a token from **`VITE_AUTH_LOGIN_URL`** (default `…/api/auth/login`) and sends `Authorization: Bearer …` on API calls via `authorizedFetch` (`token-manager.ts`).
 
 ---
 
-## 📁 Структура проекта
+## Application purpose & client scope
+
+**What it does (short):** A React SPA for **RAG-style chat** over uploaded documents, scoped by **knowledge scopes**, plus **admin-style** pages to manage documents and scopes.
+
+**Main flows:**
+
+- **Home (`/`)** — Landing via `MainPage` inside `AppLayout` (header, footer).
+- **Chats (`/chats`, `/chats/:chatId`)** — Two-column layout: `ChatPage` (sidebar + conversation + composer). New threads are created when the user sends a message without a `chatId`; the server may return **`newChatId`** in the SSE stream, after which the client **navigates** to `/chats/:id` (`submit-chat-message.ts`).
+- **Documents (`/documents`, `/documents/view`)** — List/upload/edit/delete documents; viewer loads PDF blobs from `/api/files/...`.
+- **Scopes (`/scopes`)** — List and create knowledge scopes (`/api/knowledgescopes/...`).
+- **`/chat`** — Redirects to `/chats`.
+
+**Role in the system:** Pure **browser client**. It uses **`fetch`** (not axios in `src/`), **`credentials: 'include'`**, JWT in memory (`auth-store`), and **manual SSE parsing** for chat replies. No SSR/RSC.
+
+**Entry and shell:**
+
+- `SampleRag.Client/src/main.tsx` — `ReactDOM.createRoot`, `StrictMode`, `I18nextProvider`, `App`.
+- `app/App.tsx` — `QueryProvider` (TanStack Query) + `AppRouter`.
+- `app/router.tsx` — `createBrowserRouter`, routes above, `framer-motion` page transitions.
+
+**Notable routing:** No route guards or login UI in code; auth is **implicit dev login** (see weak points).
+
+---
+
+## Project structure
+
+Schematic tree (app code under `SampleRag.Client/src/`, depth ~3):
 
 ```
-sample-rag-client/
-├── SampleRag.Client/           # Корневая папка фронтенд-приложения
-│   ├── public/                 # Статические ресурсы (vite.svg)
-│   ├── src/                    # Исходный код (структура по .esproj; файлов в репозитории нет)
-│   │   ├── api/                # Запланировано: API-слой
-│   │   ├── configs/            # Запланировано: конфигурации
-│   │   ├── hooks/              # Запланировано: React hooks
-│   │   ├── hocs/               # Запланировано: higher-order components
-│   │   ├── services/           # Запланировано: сервисы (в т.ч. NewFolder)
-│   │   ├── states/store/       # Запланировано: хранилище состояния
-│   │   └── utils/              # Запланировано: утилиты
-│   ├── .vscode/                # Настройки VS Code (launch.json для отладки)
-│   ├── index.html              # HTML-точка входа, подключает /src/main.tsx
-│   ├── vite.config.ts          # Конфигурация Vite
-│   ├── tsconfig.json           # Корневой TS config (references на app и node)
-│   ├── tsconfig.app.json       # TypeScript для приложения (src)
-│   ├── tsconfig.node.json      # TypeScript для Node (vite.config)
-│   ├── eslint.config.js       # ESLint (flat config)
-│   ├── package.json            # Зависимости и скрипты
-│   ├── SampleRag.Client.esproj # MSBuild-проект (VS JavaScript SDK)
-│   └── README.md, CHANGELOG.md
-├── specs/001-rag-chat-client/  # Спецификация фичи: план, исследование, контракты API
-└── .specify/                   # Шаблоны и скрипты speckit
+SampleRag.Client/
+├── src/
+│   ├── app/           # App shell: App, router, layout, QueryProvider, global styles
+│   ├── pages/       # Route-level screens: main, chat, documents, scopes
+│   ├── widgets/     # Composite UI: chat sidebar, message list, header, footer
+│   ├── features/    # User flows: ask-question (composer, scope selector), upload, share-chat
+│   ├── entities/    # Thin domain UI/types: chat (e.g. citations), scope types
+│   └── shared/      # api/, store/ (Zustand), lib/, ui/ primitives
+├── vite.config.ts
+├── tsconfig.app.json
+└── package.json
 ```
 
-**Назначение директорий:**
+**Purpose (brief):**
 
-- **SampleRag.Client** — SPA на React + TypeScript; сборка через Vite; интеграция с Visual Studio через .esproj (старт `npm run dev`, тесты Jest из `src/`, вывод в `dist`).
-- **src/** — по .esproj задекларированы папки в стиле **layer-based** (api, configs, hooks, hocs, services, states, utils). В репозитории файлов в `src/` не обнаружено.
-- **specs/** — документация фичи 001-rag-chat-client: спецификация, план реализации, исследование технологий, контракты API (OpenAPI), чеклисты UX/требований.
+- **`app`** — Wiring only; keeps providers and router out of feature code.
+- **`pages`** — Orchestrates widgets/features and hooks (`*.hook.ts`) per screen.
+- **`widgets`** — Reusable chat chrome (sidebar, messages, headings).
+- **`features`** — Scoped product behavior (query input, document upload, share owners).
+- **`entities`** — Small reusable pieces tied to domain concepts.
+- **`shared`** — API clients, Zustand stores, i18n, Tailwind-friendly UI primitives.
 
-**Принципы организации кода:** Фактически присутствует только **конфигурационная** и **документационная** часть. По .esproj видна организация по слоям (api, services, states, utils, hooks, hocs). В **плане реализации** (specs) заявлена архитектура **Feature-Sliced Design (FSD)** с слоями `app`, `pages`, `widgets`, `features`, `entities`, `shared` — то есть целевая организация кода отличается от текущей заготовки в .esproj.
+### Assessment (fit vs. problems)
 
----
+**Fit:** The layout matches **Feature-Sliced Design**-style boundaries (app → pages → widgets/features → shared). API access is **centralized** under `shared/api`; server cache uses **TanStack Query** where list/detail fetching fits; **Zustand** holds chat message lines and ephemeral stream artifacts—reasonable split for streaming UX.
 
-## 🛠 Технологический стек
+**Problems:**
 
-| Категория | Технология | Версия | Назначение |
-|-----------|------------|--------|------------|
-| Фреймворк | React | ^18.2.0 | UI |
-| Язык | TypeScript | ^5.2.2 | Типизация |
-| Сборка | Vite | ^5.2.0 | Dev-сервер и production build |
-| Плагин сборки | @vitejs/plugin-react | ^4.2.1 | Fast Refresh для React |
-| Роутинг | react-router-dom | ^7.5.0 | Маршрутизация |
-| Состояние | @reduxjs/toolkit, react-redux | ^2.2.5, ^9.1.2 | Глобальное состояние (текущий стек) |
-| HTTP | axios | ^1.6.7 | Запросы к API |
-| UI-библиотеки | @mui/material, antd | ^7.0.2, ^5.14.1 | Компоненты (текущий стек) |
-| Стили (UI) | @emotion/react, @emotion/styled | ^11.14.0 | Используются MUI |
-| i18n | i18next, react-i18next, i18next-browser-languagedetector | ^25.0.2, ^15.5.1, ^8.1.0 | Локализация RU/EN |
-| Линтинг | ESLint, typescript-eslint, react-hooks, react-refresh | 8.x / 7.x | Линт и правила для React |
-| Окружение | Node (ESM) | — | `"type": "module"` в package.json |
+- **`shared/store` mixes several domains** (chats, messages, scopes, UI, auth, submission, stream artifacts). It works at current size but can become a **grab-bag** without naming/subfolder discipline.
+- **Duplicate DTO shapes** (e.g. `MessageDto` / `ChatDto` in both `messages.ts` and `chats.ts`) risks drift.
+- **Dead or unused surface:** `messages-store.finalizeSendResponse` exists but **is not invoked** from `submit-chat-message.ts`; the non-SSE JSON path from `sendMessage` may not reconcile server `message`/`sources` into the store (verify against API behavior).
+- **Dependency noise:** `package.json` still lists **Redux Toolkit**, **axios**, and **idb-keyval** with **no imports in `src/`** (verify before removal).
 
-**Замечание:** В **спецификации и плане** описан иной целевой стек: Zustand вместо Redux, TanStack Query вместо только axios, shadcn/ui + Headless UI + Lucide React вместо MUI/Ant Design, Tailwind, Framer Motion, react-dropzone. Текущий `package.json` отражает более ранний или параллельный выбор (Redux, MUI, Ant Design) — при следовании спецификации потребуется приведение зависимостей в соответствие с планом.
+**Conventions:** Colocated hooks as `<component>.hook.ts` (see `.cursor/rules/custom-hooks-fsd.mdc`). ESLint warns on `any` but does not enforce FSD import boundaries via eslint-plugin-boundaries.
 
 ---
 
-## 🏗 Архитектура
+## Technology stack
 
-**Текущее состояние:** Реализованной архитектуры приложения в коде нет (нет компонентов, страниц, store, API-вызовов). Ниже — по конфигурации, .esproj и документации.
+| Area | Choice | Notes |
+|------|--------|--------|
+| Runtime | Node 20 (Dockerfile) | Local dev: match LTS as needed |
+| Build | Vite 7, `@vitejs/plugin-react` | Dev server `5274`, `strictPort`, `host: true` |
+| Language | TypeScript 5.9, `strict` | `tsconfig.app.json`: `noUnusedLocals`, `noUnusedParameters`, etc. |
+| React | 19.x | Client-only |
+| Routing | `react-router-dom` 7 | `createBrowserRouter`, `RouterProvider` |
+| Server state | TanStack Query 5 | Default `staleTime` 5m, custom `retry` (intended to skip 401/403 if `error.status` exists) |
+| Client state | Zustand 5 | Messages, chats list metadata, auth token, stream artifacts, scope selection, etc. |
+| HTTP | Native `fetch` | Wrapped by `authorizedFetch` |
+| UI | MUI 7, Ant Design 6, Headless UI, Lucide, Tailwind 4 + SCSS | Mixed stack; prefer consolidating over time |
+| Motion | Framer Motion 12 | Route transitions |
+| i18n | i18next + react-i18next | Initialized under `shared/lib/i18n` |
+| Forms / uploads | react-dropzone | Document upload feature |
+| Lint / format | ESLint 9 flat config, Prettier (script), Husky `prepare` | No Vitest/Jest in `package.json` |
 
-- **Компонентная архитектура:** Не проанализирована — компонентов в репозитории нет. План предполагает кастомные чат-компоненты на базе shadcn/ui без готовой чат-библиотеки.
-- **Разделение логики:** В .esproj зарезервированы папки `hooks` и `hocs`; в исследовании упомянуты кастомный TokenManager и паттерны вроде `useDropzone` для загрузки файлов.
-- **Управление состоянием:** В коде используется только конфигурация. В зависимостях — Redux (RTK). В плане — Zustand для UI и клиентского состояния, TanStack Query для серверных данных, idb-keyval только для офлайн-черновиков.
-- **API-слой:** В коде отсутствует. По спецификации все запросы к локальному RAG API; аутентификация — Bearer JWT, access token в памяти. На текущем этапе JWT временно получается напрямую из эндпоинта `/api/auth/login` и передаётся в заголовке `Authorization: Bearer <token>`; в дальнейшем реализация может быть заменена на полноценный OIDC-провайдер без изменений остального кода.
-- **Роутинг:** Подключён React Router v7; план предполагает плавные переходы (Framer Motion AnimatePresence).
-- **Ошибки и загрузка:** В спецификации зафиксированы UX-007 (ошибка/таймаут — сообщение, останов спиннера, retry), SC-008 (загрузка видна в течение 500 ms).
-
-**Пример целевого паттерна (из research.md) — валидация загрузки PDF:**
-
-```ts
-useDropzone({
-  accept: { 'application/pdf': ['.pdf'] },
-  maxSize: 20 * 1024 * 1024, // 20MB
-  maxFiles: 1,
-  onDropRejected: (rejections) => { /* UX-010 feedback */ },
-  validator: (file) => { /* extra checks if needed */ },
-});
-```
+**TypeScript path aliases:** No `@/` alias in the explored configs; imports use relative paths.
 
 ---
 
-## 🎨 UI/UX и стилизация
+## APIs accessed from the client
 
-- **Подходы к стилизации:** В текущих зависимостях — Emotion (через MUI) и компоненты MUI/Ant Design. В плане — Tailwind v3.4+, SCSS, shadcn/ui, Headless UI, Lucide React, темизация через CSS-переменные.
-- **Дизайн-система / UI-kit:** Текущий стек — MUI + Ant Design (две полноценные библиотеки). Целевой — единая база на shadcn/ui + Headless UI с сдержанной палитрой.
-- **Layout чата:** Страница чата построена как двухколоночный layout: слева фиксированная боковая панель `ChatSidebar` без отступов от края экрана, справа основная область сообщений и инпута. В пустом состоянии (нет выбранного чата) инпут первого сообщения расположен по центру правой области; при переходе в конкретный чат список сообщений заполняет правую часть, а поле ввода сообщения закрепляется внизу экрана.
-- **Сообщения:** Сообщения пользователя и системы визуально различаются: пользовательские сообщения выравниваются вправо и отображаются на контрастном фоне, системные — слева, на более спокойном фоне, с цитатами-источниками под ответом. Порядок сообщений сохраняется хронологическим (по мере отправки/получения).
-- **Адаптивность:** В коде не реализована; в спецификации заложена поддержка современных браузеров и удобный интерфейс (в т.ч. SC-009 — первый сценарий «вопрос–ответ» без подсказок).
-- **Темизация:** В плане — сдержанная палитра через CSS-переменные в `:root`, без ярких акцентов.
-- **Доступность (a11y):** В спецификации UX-011 — видимые focus-состояния и поддержка клавиатурной навигации.
+### Base URL and env
 
----
+| Variable | Role |
+|----------|------|
+| `VITE_API_BASE_URL` | Prefix for all API paths (e.g. `http://localhost:5234`) |
+| `VITE_AUTH_LOGIN_URL` | POST login; default `…/api/auth/login` |
+| `VITE_APP_NAME` | Display string (wired for Docker/env parity) |
 
-## ✅ Качество кода
+**Important:** Values are **embedded at build time** for production builds; Docker dev image injects env at container start. Browsers call the API from the **user’s machine**, so URLs must be reachable from the host (see `README.md` — not Docker internal DNS names for `VITE_*`).
 
-- **ESLint:** Используется flat config (`eslint.config.js`): `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`. Игнорируется `dist`. Для .ts/.tsx включены recommended правила и `react-refresh/only-export-components` (warn). Type-aware или strict type-checked правила не включены — в README предложено перейти на `recommendedTypeChecked`/`strictTypeChecked` с `parserOptions.project`.
-- **Prettier / Stylelint:** В репозитории не найдены.
-- **Именование и организация:** Единых соглашений в коде не видно из-за отсутствия исходников; план предписывает FSD и запрет `any`.
-- **TypeScript:** В `tsconfig.app.json` включены `strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedSideEffectImports`; целевой план запрещает `any`.
-- **TanStack Query (`queryFn`):** Нельзя передавать `queryFn: apiFn` напрямую, если `apiFn` ожидает объект фильтров/параметров с необязательными полями. TanStack Query передает `QueryFunctionContext` (`{ client, queryKey, signal }`), и TypeScript может считать типы совместимыми, из-за чего фильтры молча станут `undefined`. Используйте обертку `queryFn: () => apiFn(filters)` или извлекайте фильтры из `queryKey`.
-- **Тесты:** В .esproj указаны Jest и корень тестов `src/`. В конституции проекта зафиксировано: тесты не обязательны. Тестовых файлов в репозитории не обнаружено.
-- **Документация в коде:** Не применимо — кода приложения нет. README — стандартный Vite+React+TS; CHANGELOG описывает создание проекта через create-vite и добавление .esproj.
+### Endpoints (by module)
 
----
+| Domain | Module | Typical endpoints |
+|--------|--------|-------------------|
+| Auth (dev) | `token-manager.ts` | `POST` login URL → raw JWT string |
+| Messages | `messages.ts` | `POST /api/messages` (JSON or SSE), `POST /api/messages/filter` |
+| Chats | `chats.ts` | `POST /api/chats/filter`, `POST /api/chats`, `POST /api/chats/{id}/owners`, `DELETE /api/chats/{id}` |
+| Documents | `documents.ts` | `POST /api/documents/filter`, `POST /api/documents/filter/ids`, `POST /api/documents`, `DELETE /api/documents/{id}`, `GET /api/files/...` (blob) |
+| Scopes | `scopes.ts` | `POST /api/knowledgescopes/filter`, `POST /api/knowledgescopes`, user add/remove |
+| Feedback | `feedbacks.ts` | `POST /api/feedbacks`, `POST /api/feedbacks/filter` |
 
-## 🔧 Ключевые «компоненты» и конфигурации
+### Auth
 
-Поскольку компонентов приложения нет, ниже — ключевые артефакты инфраструктуры и контракта.
+- Token stored in **`useAuthStore`** (Zustand), **in memory**.
+- **`fetchJwtToken`** posts a **fixed JSON body** (demo user fields) to `VITE_AUTH_LOGIN_URL`; response is treated as a **trimmed raw token string** (not a JSON object).
+- **`authorizedFetch`**: attaches Bearer header, retries once after `401` with a fresh token.
+- **`credentials: 'include'`** on login and API calls (cookies if the API sets them).
 
-### 1. Vite (vite.config.ts)
+### Streaming / cancellation
 
-Назначение: сборка и dev-сервер. Задаёт порт 5274 и React-плагин.
+- SSE: `sendMessage` uses `response.body.getReader()`, decodes lines, parses `data: …` JSON (`messages.ts`).
+- **No `AbortSignal`** is threaded from the UI into `sendMessage` in the current flow—long requests cannot be cancelled from the client without closing the page or extending the API.
 
-```ts
-import { defineConfig } from 'vite';
-import plugin from '@vitejs/plugin-react';
+### Contracts vs. codegen
 
-export default defineConfig({
-  plugins: [plugin()],
-  server: { port: 5274 },
-});
-```
-
-### 2. TypeScript (tsconfig.app.json)
-
-Назначение: компиляция исходников в `src` (ES2020, ESNext modules, strict, jsx: react-jsx, noEmit для Vite).
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true
-  },
-  "include": ["src"]
-}
-```
-
-### 3. ESLint (eslint.config.js)
-
-Назначение: линтинг .ts/.tsx с поддержкой React hooks и React Refresh.
-
-```js
-export default tseslint.config(
-  { ignores: ['dist'] },
-  {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['**/*.{ts,tsx}'],
-    plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-    },
-  },
-);
-```
-
-### 4. Точка входа (index.html)
-
-Подключает SPA через единственный модуль `main.tsx` (файл в репозитории отсутствует).
-
-```html
-<div id="root"></div>
-<script type="module" src="/src/main.tsx"></script>
-```
-
-### 5. MSBuild-проект (SampleRag.Client.esproj)
-
-Назначение: интеграция с Visual Studio — команда запуска `npm run dev`, тесты Jest из `src/`, вывод в `dist`, задекларированная структура папок под слой api, configs, hooks, hocs, services, states/store, utils.
+Types are **hand-written** to mirror the backend. There is **no OpenAPI-generated client** in `src/` (specs may exist under `specs/` for humans).
 
 ---
 
-## 📋 Паттерны и лучшие практики (по спецификации)
+## Patterns & client architecture
 
-- **Переиспользуемые паттерны:** Кастомный TokenManager (получение JWT через `/api/auth/login`, хранение в памяти и автоматическое обновление при 401), react-dropzone для валидации PDF (тип, 20MB) до отправки на сервер, FSD для масштабирования фич.
-- **Производительность:** В плане — загрузка видна в течение 500 ms, ответ за &lt;30 s, отображение загруженного документа в течение 10 s после загрузки.
-- **Асинхронность:** План — TanStack Query с правилами retry (без retry на 401/403), SSE через EventSource при необходимости.
-- **Валидация:** Клиентская проверка загрузки: только PDF, макс. 20MB; невалидные файлы не отправляются (FR-015, UX-010).
-- **Локализация:** react-i18next, ленивая загрузка JSON, ICU; языки RU/EN (FR-016, SC-007).
+### 1. Router + layout composition
+
+- **Where:** `app/router.tsx`, `app/layout.tsx`.
+- **Role:** Declarative routes; `AppLayout` wraps non-chat pages with header/footer; chat route uses a **CSS grid** for sidebar + footer placement.
+- **Weak spots:** `AnimatePresence` wraps outer motion div but **route elements swap inside `RouterProvider`**—transitions may be limited compared to `useLocation`-keyed outlets.
+
+### 2. TanStack Query for reads and mutations
+
+- **Where:** `chat-page.hook.ts` (messages + document metadata), `chat-sidebar.hook.ts`, `scope-selector.hook.ts`, `documents-page.tsx`, `scopes-page.tsx`, `document-viewer-page.hook.ts`, `share-chat-form.tsx`, `document-upload.tsx`, `create-scope-form.hook.ts`.
+- **Role:** Cached lists, `invalidateQueries` after mutations, `enabled` flags tied to route params.
+- **Correctness:** `chat-page.hook.ts` syncs query results into **`useMessagesStore`** in `useEffect` (depends on `dataUpdatedAt` to refetch same data). Risk: **dual sources of truth** (React Query cache + Zustand) for messages; acceptable if Zustand is treated as the **UI source** and Query as **fetch**.
+- **Query retry:** Default client checks `error.status`; many `throw new Error(\`status ${n}\`)` paths **do not attach `status`**, so **401 might still retry**—worth aligning (custom `ApiError` or `meta`).
+
+### 3. Zustand for chat UX and streaming
+
+- **Where:** `messages-store.ts`, `chats-store.ts`, `stream-artifacts-store.ts`, `auth-store.ts`, `knowledge-scope-store.ts`, `message-submission-store.ts`, `ui-store.ts`.
+- **Role:** Optimistic rows, incremental assistant text from SSE, sidebar list, ephemeral “thinking/tool” artifacts.
+- **Weak spots:** `submit-chat-message.ts` uses **`getState()`** imperative style—clear for async streams but harder to test than injected deps.
+
+### 4. Imperative submit orchestration
+
+- **Where:** `pages/chat/ui/submit-chat-message.ts`.
+- **Role:** Single function coordinates `sendMessage`, navigation on `newChatId`, artifact routing, and store updates.
+- **Correctness:** Handles **first SSE frame** creating a chat (`NewChatName` + `newChatId`); starts `stream-artifacts` turn after navigation when needed.
+
+### 5. API thin layer
+
+- **Where:** `shared/api/client.ts` (`apiGet`, `apiPost`, `apiDelete`), domain modules on top.
+- **Role:** Consistent `authorizedFetch` and error handling.
+- **Weak spots:** Errors are generic `Error` strings—no structured problem details for the UI.
+
+### 6. UI stack fragmentation
+
+- **Where:** MUI/Ant Design/Headless/Tailwind coexist (e.g. layout vs. widgets).
+- **Role:** Rapid composition; **cost** is bundle size and inconsistent design tokens.
+
+### Anti-patterns / tech debt signals
+
+- **`console.log` in production paths** (`documents.ts` upload, `scopes.ts` createScope)—should be removed or gated.
+- **Hardcoded credentials** in `token-manager.ts` — acceptable only for **local demo**; high risk if ever deployed.
 
 ---
 
-## 🔧 Инфраструктура разработки
+## Testing strategy
 
-- **Скрипты (package.json):**  
-  - `dev` — `vite` (запуск dev-сервера на порту 5274).  
-  - `build` — `tsc && vite build` (проверка типов и сборка).  
-  - `lint` — `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0`.  
-  - `preview` — `vite preview` (просмотр production-сборки).
-- **Среда:** Проект создан через `create-vite` (react-ts); в плане упомянуты husky, Prettier — в текущем репозитории не настроены.
-- **Pre-commit / CI/CD:** Не обнаружены; в плане указана необходимость проходить constitution check и при необходимости запускать `npm audit`.
-- **Docker:** Не найден.
+- **No automated tests** are present in `SampleRag.Client` for this analysis: no `vitest`, `jest`, `playwright`, or `@testing-library/*` in `package.json`, and no `*.test.ts(x)` files were found under `src/`.
+- **Implied gap:** SSE parsing (`parseMessagePart`, `parseSSEResponse`), navigation on `newChatId`, and Query↔Zustand sync deserve **unit tests** first (pure functions + store actions).
 
 ---
 
-## 📋 Выводы и рекомендации
+## Test data, mocks, and isolation
 
-**Сильные стороны:** Чёткая спецификация и план (RAG Chat Client), исследование технологий (research.md) с обоснованием выбора библиотек и лицензий; контракты API (OpenAPI); строгий TypeScript и базовая настройка ESLint; конституция проекта задаёт единые ограничения (FSD, лицензии MIT/Apache-2.0, хранение токенов, без SSR).
+- **No MSW** or global fetch mock located in-repo.
+- **Manual testing** against a running API is the effective strategy today.
 
-**Текущие ограничения:** Исходный код приложения отсутствует — нет `main.tsx`, App, страниц, виджетов, API-клиента, store. Структура в .esproj (api, configs, hooks, hocs, services, states, utils) не совпадает с заявленной FSD (app, pages, widgets, features, entities, shared). Зависимости в package.json (Redux, MUI, Ant Design) расходятся с планом (Zustand, TanStack Query, shadcn/ui, Tailwind, react-dropzone и др.).
+---
 
-**Рекомендации:**
+## Build, environment & deployment
 
-1. **Привести зависимости в соответствие со спецификацией:** внедрить Zustand, TanStack Query, shadcn/ui, Tailwind, Framer Motion, react-dropzone; при необходимости поэтапно убрать Redux, MUI, Ant Design или явно зафиксировать причины их сохранения.
-2. **Реализовать точку входа и FSD-каркас:** добавить `src/main.tsx`, провайдеры (router, i18n, store), базовый layout и маршруты согласно плану.
-3. **Унифицировать структуру:** перейти от папок в .esproj к FSD (app, pages, widgets, features, entities, shared) и обновить .esproj под новое дерево.
-4. **Усилить линтинг:** включить type-aware ESLint с `tsconfig.app.json` и при желании Prettier/Stylelint для единого стиля.
-5. **Уровень сложности:** По задумке — **middle/senior**: FSD, кастомный TokenManager, i18n, доступность, строгие требования к производительности и UX; текущее состояние — **junior-friendly** (только конфигурация и документация).
+- **Dev:** `npm run dev` → Vite on **5274**.
+- **Production build:** `npm run build` → `tsc && vite build` (output under `dist/` per Vite defaults).
+- **Docker:** `Dockerfile` at repo root runs **Vite dev server** inside Node 20 Alpine with `docker-entrypoint.sh` writing `.env` from env vars (development-oriented image, not a static `nginx` production stage in the analyzed file).
 
-Итог: кодовая база представляет собой **подготовленный каркас** с продуманной документацией и целевой архитектурой; для полноценного анализа реализации потребуется появление исходного кода в `src/` и согласование зависимостей со спецификацией.
+---
+
+## Documentation & discoverability
+
+- **`README.md`** — Onboarding, Docker, **`VITE_*`** explanation (host vs container networking).
+- **`specs/001-rag-chat-client/`** — Product/spec context; may diverge from implemented stack (already evolved toward Zustand + Query + Tailwind).
+- **`project.md` (this file)** — Should be updated when architecture or streaming contract changes (recent work: SSE `MessagePartResponse` alignment per prior implementation notes).
+
+---
+
+## Code quality & maintainability
+
+- **ESLint:** Flat config; recommended TS + React Hooks + Refresh; `@typescript-eslint/no-explicit-any`: **warn**.
+- **Prettier:** `npm run format` for `src/**/*.{ts,tsx,css,scss}`.
+- **Strict TS** enabled; relative imports are verbose but explicit.
+- **Contributor complexity:** **Mid-level** — FSD-ish layout, streaming state, and dual Query/Zustand usage require care; **junior** can still contribute in isolated features with guidance.
+
+---
+
+## Strengths
+
+- Clear **feature-sliced** folder layout and colocated **`*.hook.ts`** pattern.
+- **Centralized API** layer with JWT wrapper and documented env vars.
+- **Robust SSE handling** aligned with backend enums (`GenerationStep`, `AiTool`), including `role`/`step` normalization and `newChatId` handling.
+- **TanStack Query** used for list/load flows with invalidation on mutations.
+- **Docker + scripts** document realistic pitfalls (browser-side base URL).
+- **Framer Motion** and **i18n** wired at the app shell.
+
+---
+
+## Weak points & risks
+
+- **Security:** Demo **hardcoded login body** and raw token parsing; no real auth UX, session expiry handling, or secret hygiene beyond “dev only.”
+- **Dependency bloat / inconsistency:** MUI + Ant Design + Tailwind; unused **Redux**, **axios**, **idb-keyval** in dependencies.
+- **Error UX:** Generic thrown errors; little user-facing recovery for failed sends or uploads.
+- **Dual message state:** React Query + Zustand for messages can desync if extended carelessly.
+- **Submit completion:** `finalizeSendResponse` unused; JSON (non-SSE) `sendMessage` return value may not update UI state.
+- **No tests** on the most fragile code (SSE, navigation, stores).
+- **Observability:** Stray `console.log` in API modules.
+- **Accessibility:** Mixed libraries; composer uses patterns that need consistent a11y (project rules mention `contentEditable` guidance in `.cursor/rules`).
+
+---
+
+## Recommendations
+
+**Quick wins**
+
+1. Remove or replace **`console.log`** in `documents.ts` and `scopes.ts`.
+2. Either **wire `finalizeSendResponse`** after `sendMessage` resolves or **delete** dead API if SSE-only is guaranteed.
+3. **Drop unused dependencies** after confirming no tooling imports (`redux`, `axios`, `idb-keyval`).
+4. Introduce a small **`ApiError`** (status + body) thrown from `apiGet`/`apiPost`/`authorizedFetch` so Query `retry` and UI can branch correctly.
+
+**Medium term**
+
+5. **Consolidate UI stack** (pick Tailwind+Headless OR MUI OR Ant Design for new work).
+6. Add **Vitest** tests for `parseMessagePart` / SSE line parsing and **store reducers** (messages + stream artifacts).
+7. **AbortController** plumbed from “stop generation” UI into `sendMessage` if the API supports disconnect semantics.
+8. Replace hardcoded login with **configurable auth** (env-driven credentials for dev only, or real OIDC) before any shared deployment.
+
+**Larger work**
+
+9. **OpenAPI or zod** schemas shared with backend to prevent DTO drift between `chats.ts` and `messages.ts`.
+10. **MSW** or integration tests against a recorded fixture for regression on streaming frames.
 
 ---
 
@@ -241,7 +289,7 @@ When the response is `text/event-stream`, **each** SSE `data:` line is one JSON 
 | 4 | `responseMessage` — assistant reply text chunks (`text` appended to the in-flight assistant message) |
 | 5 | `newChatName` — `text` is the new chat title |
 
-JSON uses the property **`step`** for this enum. Some payloads may send the same value as **`role`** instead; the client normalizes both to `step` when parsing.
+JSON uses the property **`step`** for this enum. Some payloads may send the same value as **`role`** instead; the client normalizes both to `step` when parsing (`parseMessagePart`).
 
 ### `AiTool` (numeric)
 
@@ -273,3 +321,5 @@ If **no chat** was selected (`chatId` omitted in the request), the **first** eve
 ```
 
 Here `role` / `step` **`5`** is `NewChatName` (`GenerationStep`). The client must treat `newChatId` as the real chat id (navigate to `/chats/:id`, bind stream state, seed messages, etc.). Further frames use `step` **`4`** (`ResponseMessage`) for answer deltas and **`1`–`3`** for thinking / tool call / tool result as needed.
+
+Implementation reference: `SampleRag.Client/src/shared/api/messages.ts` (`sendMessage`, `parseSSEResponse`, `parseMessagePart`).

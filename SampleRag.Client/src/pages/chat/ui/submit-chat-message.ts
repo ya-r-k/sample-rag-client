@@ -89,7 +89,7 @@ export async function submitChatMessage(
       messagesStore.appendUserAndAssistantPlaceholders(chatId, text)
     }
 
-    const result = await sendMessage(
+    await sendMessage(
       {
         chatId: chatId ?? undefined,
         scopeId,
@@ -97,9 +97,6 @@ export async function submitChatMessage(
       },
       {
         onEvent: (part) => {
-          console.log(resolvedChatId)
-          console.log(part)
-
           if (
             part.step === GenerationStep.NewChatName &&
             part.text &&
@@ -144,14 +141,6 @@ export async function submitChatMessage(
         },
       },
     )
-
-    if (!chatId && result.chat?.id) {
-      navigate(`/chats/${result.chat.id}`, { replace: true })
-    }
-    if (resolvedChatId) {
-      messagesStore.finalizeSendResponse(resolvedChatId, result)
-      artifactsStore.clearTurn(resolvedChatId, turnId)
-    }
   } catch (err) {
     console.error('Send message failed:', err)
     if (resolvedChatId) {

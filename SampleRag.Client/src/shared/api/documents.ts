@@ -80,8 +80,6 @@ export async function uploadDocument(
       scopeId: body.scopeId,
       file: { content, fileName: body.file.name },
     }
-
-    console.log('payload', payload)
   } else {
     payload = body as UploadDocumentRequestModel
   }
