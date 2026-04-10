@@ -55,6 +55,19 @@
     "ariaLabel": "Поле ввода вопроса",
     "sendAriaLabel": "Отправить"
   },
+  "generationSteps": {
+    "reasoningSummary": "Ход рассуждений модели",
+    "searchDocs": "Поиск во внутренней документации",
+    "searchDocsWithQuery": "Поиск во внутренней документации — {{query}}",
+    "currentTime": "Определение текущего времени",
+    "unknownTool": "Вызов инструмента",
+    "callDetails": "Параметры вызова",
+    "knowledgeScope": "Область знаний",
+    "autoScope": "Автоматический выбор области",
+    "yes": "Да",
+    "no": "Нет",
+    "toolResult": "Результат"
+  },
   "common": {
     "mainNavigation": "Основная навигация",
     "logoAlt": "Логотип"

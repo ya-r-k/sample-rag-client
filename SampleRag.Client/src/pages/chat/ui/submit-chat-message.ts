@@ -7,7 +7,7 @@ import {
 } from '../../../shared/api/messages'
 import { useChatsStore } from '../../../shared/store/chats-store'
 import { useMessagesStore } from '../../../shared/store/messages-store'
-import { useStreamArtifactsStore } from '../../../shared/store/stream-artifacts-store'
+import { useMessageGenerationStepsStore } from '../../../shared/store/message-generation-steps-store'
 
 export type ChatPageSubmitDeps = {
   isSubmitting: boolean
@@ -17,42 +17,11 @@ export type ChatPageSubmitDeps = {
   t: TFunction
 }
 
-function routeStreamEventToArtifacts(
-  chatId: string,
+function routeStreamEventToGenerationSteps(
   turnId: string,
   part: MessagePartResponse,
 ) {
-  const { appendArtifact } = useStreamArtifactsStore.getState()
-  switch (part.step) {
-    case GenerationStep.AiThinking:
-      if (part.text) {
-        appendArtifact(chatId, turnId, {
-          type: 'reasoning',
-          text: part.text,
-        })
-      }
-      break
-    case GenerationStep.ToolUsing:
-      if (part.toolsCalls?.length) {
-        appendArtifact(chatId, turnId, {
-          type: 'tool',
-          text: part.text,
-          payload: part.toolsCalls,
-        })
-      }
-      break
-    case GenerationStep.ToolResult:
-      if (part.toolsResults?.length) {
-        appendArtifact(chatId, turnId, {
-          type: 'tool',
-          text: part.text,
-          payload: part.toolsResults,
-        })
-      }
-      break
-    default:
-      break
-  }
+  useMessageGenerationStepsStore.getState().appendStreamPart(turnId, part)
 }
 
 export async function submitChatMessage(
@@ -75,13 +44,13 @@ export async function submitChatMessage(
 
   const chatsStore = useChatsStore.getState()
   const messagesStore = useMessagesStore.getState()
-  const artifactsStore = useStreamArtifactsStore.getState()
+  const generationStepsStore = useMessageGenerationStepsStore.getState()
 
   setIsSubmitting(true)
   let resolvedChatId = chatId
   const turnId = crypto.randomUUID()
   if (resolvedChatId) {
-    artifactsStore.startTurn(resolvedChatId, turnId)
+    generationStepsStore.startTurn(turnId, resolvedChatId)
   }
 
   try {
@@ -89,7 +58,7 @@ export async function submitChatMessage(
       messagesStore.appendUserAndAssistantPlaceholders(chatId, text)
     }
 
-    await sendMessage(
+    const result = await sendMessage(
       {
         chatId: chatId ?? undefined,
         scopeId,
@@ -113,7 +82,7 @@ export async function submitChatMessage(
             })
 
             if (hadNoChatId) {
-              artifactsStore.startTurn(resolvedChatId, turnId)
+              generationStepsStore.startTurn(turnId, resolvedChatId)
               navigate(`/chats/${resolvedChatId}`, { replace: true })
             }
 
@@ -127,9 +96,10 @@ export async function submitChatMessage(
           if (
             part.step === GenerationStep.AiThinking ||
             part.step === GenerationStep.ToolUsing ||
-            part.step === GenerationStep.ToolResult
+            part.step === GenerationStep.ToolResult ||
+            part.step === GenerationStep.ResponseMessage
           ) {
-            routeStreamEventToArtifacts(resolvedChatId, turnId, part)
+            routeStreamEventToGenerationSteps(turnId, part)
           }
 
           if (
@@ -141,11 +111,19 @@ export async function submitChatMessage(
         },
       },
     )
+
+    if (resolvedChatId) {
+      messagesStore.finalizeSendResponse(resolvedChatId, result)
+      if (result.message?.id) {
+        generationStepsStore.commitTurnToMessage(turnId, result.message.id)
+      } else {
+        generationStepsStore.clearTurn(turnId)
+      }
+      generationStepsStore.finishTurn(turnId)
+    }
   } catch (err) {
     console.error('Send message failed:', err)
-    if (resolvedChatId) {
-      artifactsStore.clearTurn(resolvedChatId, turnId)
-    }
+    generationStepsStore.clearTurn(turnId)
   } finally {
     setIsSubmitting(false)
     void t

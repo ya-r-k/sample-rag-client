@@ -80,6 +80,37 @@ export function useQueryInput({
     [setText],
   )
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      const plain = e.clipboardData.getData('text/plain')
+      const editor = editorRef.current
+      if (!editor || plain === '') {
+        return
+      }
+      const selection = window.getSelection()
+      if (!selection?.rangeCount) {
+        return
+      }
+      const range = selection.getRangeAt(0)
+      if (!editor.contains(range.commonAncestorContainer)) {
+        return
+      }
+      range.deleteContents()
+      const node = document.createTextNode(plain)
+      range.insertNode(node)
+      range.setStartAfter(node)
+      range.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(range)
+      if (editor.innerHTML === '<br>') {
+        editor.innerHTML = ''
+      }
+      setText((editor.textContent ?? '').trim())
+    },
+    [setText],
+  )
+
   const handleSubmit = useCallback(
     (e: React.SubmitEvent) => {
       e.preventDefault()
@@ -110,6 +141,7 @@ export function useQueryInput({
     isScopeInvalid,
     handleSubmit,
     handleContentInput,
+    handlePaste,
     disabled,
     className,
     flipOptionsUp,

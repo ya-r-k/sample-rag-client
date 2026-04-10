@@ -10,7 +10,7 @@ export type MessageDto = {
   chatId?: string
   text: string
   createdAt?: string
-  aiGenerated?: boolean
+  aiGenerated: boolean
   sourceReferences?: SourceDto[]
 }
 

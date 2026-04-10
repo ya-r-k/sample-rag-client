@@ -4,7 +4,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { deleteChat } from '../../../shared/api/chats'
 import { useChatsStore } from '../../../shared/store/chats-store'
 import { useMessagesStore } from '../../../shared/store/messages-store'
-import { useStreamArtifactsStore } from '../../../shared/store/stream-artifacts-store'
+import { useMessageGenerationStepsStore } from '../../../shared/store/message-generation-steps-store'
 
 const CHATS_QUERY_KEY = ['chats', 20] as const
 
@@ -37,7 +37,7 @@ export async function deleteChatFlow(
     queryClient.removeQueries({ queryKey: ['chat-messages', chatId] })
     useChatsStore.getState().removeChat(chatId)
     useMessagesStore.getState().removeMessagesForChat(chatId)
-    useStreamArtifactsStore.getState().clearChatArtifacts(chatId)
+    useMessageGenerationStepsStore.getState().clearChat(chatId)
     navigate('/chats')
   } catch (error) {
     console.error('Delete chat failed:', error)

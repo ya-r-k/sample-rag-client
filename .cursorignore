@@ -6,3 +6,4 @@
 **/.env
 **/.env.*
 **/*.esproj.user
+**/package-lock.json

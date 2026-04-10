@@ -55,6 +55,19 @@
     "ariaLabel": "User query input",
     "sendAriaLabel": "Send"
   },
+  "generationSteps": {
+    "reasoningSummary": "Model reasoning process",
+    "searchDocs": "Search in internal documentation",
+    "searchDocsWithQuery": "Search in internal documentation — {{query}}",
+    "currentTime": "Determine current time",
+    "unknownTool": "Tool call",
+    "callDetails": "Call details",
+    "knowledgeScope": "Knowledge scope",
+    "autoScope": "Automatic scope selection",
+    "yes": "Yes",
+    "no": "No",
+    "toolResult": "Result"
+  },
   "common": {
     "mainNavigation": "Main navigation",
     "logoAlt": "Logo"

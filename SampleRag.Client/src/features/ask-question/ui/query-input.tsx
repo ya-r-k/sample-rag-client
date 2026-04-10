@@ -15,6 +15,7 @@ export function QueryInput(props: QueryInputProps) {
     isScopeInvalid,
     handleSubmit,
     handleContentInput,
+    handlePaste,
     disabled,
     className,
     flipOptionsUp,
@@ -40,6 +41,7 @@ export function QueryInput(props: QueryInputProps) {
           contentEditable={true}
           suppressContentEditableWarning={true}
           onInput={handleContentInput}
+          onPaste={handlePaste}
           role="textbox"
           aria-placeholder={effectivePlaceholder}
           aria-label={t('queryInput.ariaLabel')}
