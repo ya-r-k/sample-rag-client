@@ -2,7 +2,8 @@ import type { NavigateFunction } from 'react-router-dom'
 import type { TFunction } from 'i18next'
 import {
   sendMessage,
-  type SendMessageStreamEvent,
+  GenerationStep,
+  type MessagePartResponse,
 } from '../../../shared/api/messages'
 import { useChatsStore } from '../../../shared/store/chats-store'
 import { useMessagesStore } from '../../../shared/store/messages-store'
@@ -19,39 +20,38 @@ export type ChatPageSubmitDeps = {
 function routeStreamEventToArtifacts(
   chatId: string,
   turnId: string,
-  event: SendMessageStreamEvent,
+  part: MessagePartResponse,
 ) {
   const { appendArtifact } = useStreamArtifactsStore.getState()
-  if (event.reasoningDelta) {
-    appendArtifact(chatId, turnId, {
-      type: 'reasoning',
-      text: event.reasoningDelta,
-    })
-  }
-  if (event.retrievalDelta) {
-    appendArtifact(chatId, turnId, {
-      type: 'retrieval',
-      text: event.retrievalDelta,
-    })
-  }
-  if (event.streamArtifact) {
-    const a = event.streamArtifact
-    appendArtifact(chatId, turnId, {
-      type: a.type,
-      text: a.text,
-      payload: a.payload,
-      at: a.at,
-    })
-  }
-  if (event.streamArtifacts) {
-    for (const a of event.streamArtifacts) {
-      appendArtifact(chatId, turnId, {
-        type: a.type,
-        text: a.text,
-        payload: a.payload,
-        at: a.at,
-      })
-    }
+  switch (part.step) {
+    case GenerationStep.AiThinking:
+      if (part.text) {
+        appendArtifact(chatId, turnId, {
+          type: 'reasoning',
+          text: part.text,
+        })
+      }
+      break
+    case GenerationStep.ToolUsing:
+      if (part.toolsCalls?.length) {
+        appendArtifact(chatId, turnId, {
+          type: 'tool',
+          text: part.text,
+          payload: part.toolsCalls,
+        })
+      }
+      break
+    case GenerationStep.ToolResult:
+      if (part.toolsResults?.length) {
+        appendArtifact(chatId, turnId, {
+          type: 'tool',
+          text: part.text,
+          payload: part.toolsResults,
+        })
+      }
+      break
+    default:
+      break
   }
 }
 
@@ -96,59 +96,60 @@ export async function submitChatMessage(
         text,
       },
       {
-        onEvent: (event) => {
-
+        onEvent: (part) => {
           console.log(resolvedChatId)
-          console.log(event)
-          if (event.chat) {
-            const eventChatId = event.chat.id
+          console.log(part)
+
+          if (
+            part.step === GenerationStep.NewChatName &&
+            part.text &&
+            part.newChatId
+          ) {
             const hadNoChatId = !resolvedChatId
-            resolvedChatId = eventChatId
+            resolvedChatId = part.newChatId
+
+            chatsStore.upsertChat({
+              id: resolvedChatId,
+              name: part.text || t('chat.newChatName'),
+              scopeId,
+              ownerIds: [],
+            })
 
             if (hadNoChatId) {
-              artifactsStore.startTurn(eventChatId, turnId)
-              navigate(`/chats/${eventChatId}`, { replace: true })
+              artifactsStore.startTurn(resolvedChatId, turnId)
+              navigate(`/chats/${resolvedChatId}`, { replace: true })
             }
-            chatsStore.upsertChat(event.chat)
 
-            messagesStore.seedMessagesIfEmpty(eventChatId, text)
+            messagesStore.seedMessagesIfEmpty(resolvedChatId, text)
           }
 
-          const targetChatId = resolvedChatId
-          if (
-            !targetChatId ||
-            (!event.textDelta &&
-              !event.sources &&
-              !event.message &&
-              !event.reasoningDelta &&
-              !event.retrievalDelta &&
-              !event.streamArtifact &&
-              !event.streamArtifacts)
-          ) {
+          if (!resolvedChatId) {
             return
           }
-          routeStreamEventToArtifacts(targetChatId, turnId, event)
 
-          if (event.textDelta || event.sources || event.message) {
-            messagesStore.applyStreamEvent(targetChatId, event, text)
+          if (
+            part.step === GenerationStep.AiThinking ||
+            part.step === GenerationStep.ToolUsing ||
+            part.step === GenerationStep.ToolResult
+          ) {
+            routeStreamEventToArtifacts(resolvedChatId, turnId, part)
+          }
+
+          if (
+            part.step === GenerationStep.ResponseMessage &&
+            part.text !== undefined
+          ) {
+            messagesStore.applyMessagePart(resolvedChatId, part, text)
           }
         },
       },
     )
 
-    const streamedChatId = result.chat?.id ?? resolvedChatId
-    if (result.chat) {
-      resolvedChatId = result.chat.id
-      chatsStore.upsertChat(result.chat)
-    }
     if (!chatId && result.chat?.id) {
       navigate(`/chats/${result.chat.id}`, { replace: true })
     }
-    if (streamedChatId) {
-      messagesStore.finalizeSendResponse(streamedChatId, result)
-    }
-
     if (resolvedChatId) {
+      messagesStore.finalizeSendResponse(resolvedChatId, result)
       artifactsStore.clearTurn(resolvedChatId, turnId)
     }
   } catch (err) {

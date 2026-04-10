@@ -1,9 +1,10 @@
 import { create } from 'zustand'
-import type {
-  MessageDto,
-  SendMessageResponse,
-  SendMessageStreamEvent,
-  SourceDto,
+import {
+  GenerationStep,
+  type MessageDto,
+  type MessagePartResponse,
+  type SendMessageResponse,
+  type SourceDto,
 } from '../api/messages'
 
 type MessagesState = {
@@ -13,29 +14,21 @@ type MessagesState = {
   removeMessagesForChat: (chatId: string) => void
   renameChatId: (oldId: string, newId: string) => void
   /** Replace placeholders for a new optimistic thread. */
-  setOptimisticTurn: (
-    chatId: string,
-    userText: string,
-  ) => void
+  setOptimisticTurn: (chatId: string, userText: string) => void
   /** Append user + empty assistant to an existing thread. */
   appendUserAndAssistantPlaceholders: (chatId: string, userText: string) => void
   /**
    * When server sends chat first time: ensure thread has user + assistant rows
    * if cache was empty (e.g. keyed by real id).
    */
-  seedMessagesIfEmpty: (
+  seedMessagesIfEmpty: (chatId: string, userText: string) => void
+  /** Apply one streamed `MessagePartResponse` (assistant text only for `ResponseMessage`). */
+  applyMessagePart: (
     chatId: string,
+    part: MessagePartResponse,
     userText: string,
   ) => void
-  applyStreamEvent: (
-    chatId: string,
-    event: SendMessageStreamEvent,
-    userText: string,
-  ) => void
-  finalizeSendResponse: (
-    chatId: string,
-    result: SendMessageResponse,
-  ) => void
+  finalizeSendResponse: (chatId: string, result: SendMessageResponse) => void
 }
 
 function ensureAssistantMessage(
@@ -163,39 +156,23 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
       }
     }),
 
-  applyStreamEvent: (chatId, event, userText) =>
+  applyMessagePart: (chatId, part, userText) =>
     set((state) => {
-      if (
-        !event.textDelta &&
-        !event.sources &&
-        !event.message
-      ) {
+      if (part.step !== GenerationStep.ResponseMessage) {
+        return state
+      }
+      if (part.text === undefined) {
         return state
       }
       const prev = state.byChatId[chatId] ?? []
       const { next, assistantIndex } = ensureAssistantMessage(prev, chatId, userText)
       const currentAssistant = next[assistantIndex]
       const currentText = currentAssistant.text ?? ''
-      const nextTextFromMessage = event.message?.text ?? currentText
-      const mergedText = event.textDelta
-        ? `${currentText}${event.textDelta}`
-        : nextTextFromMessage
-
-      const msg = event.message
-      const mergedRefs =
-        msg?.sourceReferences !== undefined
-          ? msg.sourceReferences
-          : event.sources?.length
-            ? event.sources
-            : currentAssistant.sourceReferences
-
       next[assistantIndex] = {
         ...currentAssistant,
-        ...(msg ?? {}),
         chatId,
         aiGenerated: true,
-        text: mergedText,
-        sourceReferences: mergedRefs,
+        text: `${currentText}${part.text}`,
       }
       return {
         byChatId: {

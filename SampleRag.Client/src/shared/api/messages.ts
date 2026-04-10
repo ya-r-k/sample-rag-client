@@ -1,6 +1,6 @@
 /**
- * Messages API — aligned with Demo RAG API spec.
- * SendMessageRequest: { chatId, text }. Use chatId "00000000-0000-0000-0000-000000000000" for "create chat and send".
+ * Messages API — POST /api/messages (JSON or SSE).
+ * Stream frames match server `MessagePartResponse` (camelCase JSON).
  */
 import { authorizedFetch } from './token-manager'
 import { apiPost } from './client'
@@ -26,10 +26,50 @@ export type SourceDto = {
   pageNumber: number
 }
 
-/** SendMessageRequest — empty guid for new chat (service may create chat and stream first). */
+/** Mirrors server `GenerationStep` (numeric JSON). */
+export enum GenerationStep {
+  Unknown = 0,
+  AiThinking = 1,
+  ToolUsing = 2,
+  ToolResult = 3,
+  ResponseMessage = 4,
+  NewChatName = 5,
+}
+
+/** Mirrors server `AiTool` (numeric JSON). */
+export enum AiTool {
+  Unknown = 0,
+  CurrentTime = 1,
+  InternalDocumentData = 2,
+}
+
+export type ToolCallResponse = {
+  tool: AiTool
+  arguments?: Record<string, unknown>
+}
+
+export type ToolResultResponse = {
+  tool: AiTool
+  value?: unknown
+}
+
+/**
+ * One SSE `data:` JSON object — same shape as server `MessagePartResponse`.
+ * Some payloads use `role` for the step enum; we normalize to `step` in {@link parseMessagePart}.
+ */
+export type MessagePartResponse = {
+  text?: string
+  createdAt?: string
+  step: GenerationStep
+  newChatId?: string
+  toolsCalls?: ToolCallResponse[]
+  toolsResults?: ToolResultResponse[]
+}
+
+/** SendMessageRequest — omit/null chatId when starting a new chat. */
 export type SendMessageRequestBody = {
-  chatId: string | undefined,
-  scopeId: string | undefined,
+  chatId: string | undefined
+  scopeId: string | undefined
   text: string
 }
 
@@ -40,30 +80,8 @@ export type SendMessageResponse = {
   sources: SourceDto[]
 }
 
-/** Optional payload for hidden stream UI (reasoning, retrieval, tools). Not merged into MessageDto. */
-export type StreamArtifactEventItem = {
-  type: 'reasoning' | 'retrieval' | 'tool'
-  text?: string
-  payload?: unknown
-  at?: number
-}
-
-export type SendMessageStreamEvent = {
-  textDelta?: string
-  message?: MessageDto
-  chat?: ChatDto
-  sources?: SourceDto[]
-  /** Incremental reasoning text (server-specific); not shown as a chat message. */
-  reasoningDelta?: string
-  retrievalDelta?: string
-  /** One structured artifact row from the server. */
-  streamArtifact?: StreamArtifactEventItem
-  /** Batch artifact rows. */
-  streamArtifacts?: StreamArtifactEventItem[]
-}
-
 export type SendMessageOptions = {
-  onEvent?: (event: SendMessageStreamEvent) => void
+  onEvent?: (part: MessagePartResponse) => void
 }
 
 /** GetMessagesByModel for POST /messages/filter. */
@@ -73,16 +91,82 @@ export type GetMessagesByModel = {
   chatId?: string
 }
 
+function asGenerationStep(n: number): GenerationStep {
+  if (
+    n === GenerationStep.AiThinking ||
+    n === GenerationStep.ToolUsing ||
+    n === GenerationStep.ToolResult ||
+    n === GenerationStep.ResponseMessage ||
+    n === GenerationStep.NewChatName
+  ) {
+    return n
+  }
+  return GenerationStep.Unknown
+}
+
+function parseToolCall(raw: unknown): ToolCallResponse | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const tool = typeof o.tool === 'number' ? (o.tool as AiTool) : AiTool.Unknown
+  const args = o.arguments
+  const arguments_ =
+    args && typeof args === 'object' && !Array.isArray(args)
+      ? (args as Record<string, unknown>)
+      : undefined
+  return { tool, arguments: arguments_ }
+}
+
+function parseToolResult(raw: unknown): ToolResultResponse | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const tool = typeof o.tool === 'number' ? (o.tool as AiTool) : AiTool.Unknown
+  return { tool, value: o.value }
+}
+
+/**
+ * Parse one SSE JSON object into `MessagePartResponse`.
+ * Accepts `step` or legacy `role` for the generation step enum.
+ */
+export function parseMessagePart(raw: Record<string, unknown>): MessagePartResponse {
+  const stepNum = Number(raw.step ?? raw.role ?? 0)
+  const step = asGenerationStep(Number.isFinite(stepNum) ? stepNum : 0)
+
+  let newChatId: string | undefined
+  if (raw.newChatId !== undefined && raw.newChatId !== null) {
+    newChatId = String(raw.newChatId)
+  }
+
+  let toolsCalls: ToolCallResponse[] | undefined
+  if (Array.isArray(raw.toolsCalls)) {
+    const parsed = raw.toolsCalls.map(parseToolCall).filter(Boolean) as ToolCallResponse[]
+    if (parsed.length > 0) toolsCalls = parsed
+  }
+
+  let toolsResults: ToolResultResponse[] | undefined
+  if (Array.isArray(raw.toolsResults)) {
+    const parsed = raw.toolsResults
+      .map(parseToolResult)
+      .filter(Boolean) as ToolResultResponse[]
+    if (parsed.length > 0) toolsResults = parsed
+  }
+
+  return {
+    text: typeof raw.text === 'string' ? raw.text : undefined,
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : undefined,
+    step,
+    newChatId,
+    toolsCalls,
+    toolsResults,
+  }
+}
+
 /**
  * POST /api/messages — send message. Returns stream (SSE) or 201 JSON.
- * When chatId is empty guid, service may create a new chat and stream it first.
  */
 export async function sendMessage(
   body: SendMessageRequestBody,
   options?: SendMessageOptions,
 ): Promise<SendMessageResponse> {
-  console.log('sendMessage', body)
-
   const response = await authorizedFetch('/api/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -96,7 +180,7 @@ export async function sendMessage(
   const contentType = (response.headers.get('content-type') ?? '').toLowerCase()
 
   if (contentType.includes('text/event-stream')) {
-    return parseSSEResponse(response, options)
+    return parseSSEResponse(response, body, options)
   }
 
   return (await response.json()) as SendMessageResponse
@@ -112,10 +196,11 @@ export async function getMessagesFilter(
 }
 
 /**
- * Parses SSE stream into a single SendMessageResponse.
+ * Parses SSE stream: each `data:` line is one JSON `MessagePartResponse`.
  */
 async function parseSSEResponse(
   response: Response,
+  requestBody: SendMessageRequestBody,
   options?: SendMessageOptions,
 ): Promise<SendMessageResponse> {
   const reader = response.body?.getReader()
@@ -143,50 +228,36 @@ async function parseSSEResponse(
           const data = line.slice(6).trim()
           if (data === '[DONE]' || data === '') continue
           try {
-            const parsed = JSON.parse(data) as Record<string, unknown>
-            if (typeof parsed.text === 'string') {
-              answer += parsed.text
-              options?.onEvent?.({ textDelta: parsed.text })
+            const raw = JSON.parse(data) as Record<string, unknown>
+            const part = parseMessagePart(raw)
+            options?.onEvent?.(part)
+
+            if (part.step === GenerationStep.ResponseMessage && part.text !== undefined) {
+              answer += part.text
             }
-            if (parsed.message) {
-              message = parsed.message as SendMessageResponse['message']
-              options?.onEvent?.({ message })
+
+            if (part.newChatId) {
+              const id = part.newChatId
+              chat = {
+                id,
+                name: chat?.id === id ? (chat.name ?? '') : '',
+                scopeId: requestBody.scopeId ?? '',
+                ownerIds: chat?.ownerIds ?? [],
+              }
             }
-            if (parsed.chat) {
-              chat = parsed.chat as SendMessageResponse['chat']
-              options?.onEvent?.({ chat })
+
+            if (part.step === GenerationStep.NewChatName && part.text && chat) {
+              chat = { ...chat, name: part.text }
             }
-            if (Array.isArray(parsed.sources)) {
-              sources = parsed.sources as SendMessageResponse['sources']
-              options?.onEvent?.({ sources })
+
+            if (raw.message && typeof raw.message === 'object') {
+              message = raw.message as SendMessageResponse['message']
             }
-            if (typeof parsed.reasoningDelta === 'string') {
-              options?.onEvent?.({ reasoningDelta: parsed.reasoningDelta })
+            if (raw.chat && typeof raw.chat === 'object') {
+              chat = raw.chat as SendMessageResponse['chat']
             }
-            if (typeof parsed.retrievalDelta === 'string') {
-              options?.onEvent?.({ retrievalDelta: parsed.retrievalDelta })
-            }
-            if (
-              parsed.streamArtifact &&
-              typeof parsed.streamArtifact === 'object'
-            ) {
-              options?.onEvent?.({
-                streamArtifact: parsed.streamArtifact as SendMessageStreamEvent['streamArtifact'],
-              })
-            }
-            if (Array.isArray(parsed.artifacts)) {
-              options?.onEvent?.({
-                streamArtifacts: parsed.artifacts as NonNullable<
-                  SendMessageStreamEvent['streamArtifacts']
-                >,
-              })
-            }
-            if (
-              parsed.reasoning &&
-              typeof parsed.reasoning === 'string' &&
-              !parsed.reasoningDelta
-            ) {
-              options?.onEvent?.({ reasoningDelta: parsed.reasoning })
+            if (Array.isArray(raw.sources)) {
+              sources = raw.sources as SendMessageResponse['sources']
             }
           } catch {
             // ignore non-JSON or partial lines

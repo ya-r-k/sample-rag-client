@@ -223,3 +223,53 @@ export default tseslint.config(
 5. **Уровень сложности:** По задумке — **middle/senior**: FSD, кастомный TokenManager, i18n, доступность, строгие требования к производительности и UX; текущее состояние — **junior-friendly** (только конфигурация и документация).
 
 Итог: кодовая база представляет собой **подготовленный каркас** с продуманной документацией и целевой архитектурой; для полноценного анализа реализации потребуется появление исходного кода в `src/` и согласование зависимостей со спецификацией.
+
+---
+
+## POST /api/messages — SSE stream (`MessagePartResponse`)
+
+When the response is `text/event-stream`, **each** SSE `data:` line is one JSON object in **camelCase**, matching the backend `MessagePartResponse` (same fields as the C# DTO).
+
+### `GenerationStep` (numeric)
+
+| Value | Name |
+|------:|------|
+| 0 | `unknown` |
+| 1 | `aiThinking` |
+| 2 | `toolUsing` |
+| 3 | `toolResult` |
+| 4 | `responseMessage` — assistant reply text chunks (`text` appended to the in-flight assistant message) |
+| 5 | `newChatName` — `text` is the new chat title |
+
+JSON uses the property **`step`** for this enum. Some payloads may send the same value as **`role`** instead; the client normalizes both to `step` when parsing.
+
+### `AiTool` (numeric)
+
+| Value | Name |
+|------:|------|
+| 0 | `unknown` |
+| 1 | `currentTime` |
+| 2 | `internalDocumentData` |
+
+### Shape (camelCase)
+
+- `text?: string`
+- `createdAt?: string` (ISO)
+- `step: number` (see `GenerationStep`; or `role` as an alias for `step`)
+- `newChatId?: string` (GUID string when the server creates a chat mid-stream)
+- `toolsCalls?: { tool: number, arguments?: object }[]`
+- `toolsResults?: { tool: number, value?: unknown }[]`
+
+### New thread: first SSE frame
+
+If **no chat** was selected (`chatId` omitted in the request), the **first** event from the API is typically:
+
+```json
+{
+  "newChatId": "<guid>",
+  "text": "<proposed chat title>",
+  "role": 5
+}
+```
+
+Here `role` / `step` **`5`** is `NewChatName` (`GenerationStep`). The client must treat `newChatId` as the real chat id (navigate to `/chats/:id`, bind stream state, seed messages, etc.). Further frames use `step` **`4`** (`ResponseMessage`) for answer deltas and **`1`–`3`** for thinking / tool call / tool result as needed.
