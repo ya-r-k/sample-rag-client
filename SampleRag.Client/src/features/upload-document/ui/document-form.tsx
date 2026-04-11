@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useTranslation } from 'react-i18next'
-import { ScopeSelector, type ScopeItem } from '../../ask-question/ui/scope-selector'
+import { ScopeSelector } from '../../ask-question/ui/scope-selector'
 import { Button } from '../../../shared/ui/button'
 import { Input } from '../../../shared/ui/input'
 import { cn } from '../../../shared/lib/cn'
@@ -15,7 +15,6 @@ export type DocumentFormValues = {
 }
 
 type DocumentFormProps = {
-  scopes: ScopeItem[]
   initialName?: string
   initialScopeId?: string | null
   showFileField: boolean
@@ -29,7 +28,6 @@ type DocumentFormProps = {
 }
 
 export function DocumentForm({
-  scopes,
   initialName = '',
   initialScopeId = null,
   showFileField,
@@ -126,11 +124,10 @@ export function DocumentForm({
           {t('documentsPage.scope')}
         </label>
         <ScopeSelector
-          scopes={scopes}
           value={scopeId}
           onChange={setScopeId}
           disabled={isSubmitting}
-          placeholder={scopes.length ? t('documentsPage.selectScope') : t('documentsPage.noScopesYet')}
+          placeholder={t('documentsPage.selectScope')}
         />
       </div>
 

@@ -1,0 +1,14 @@
+---
+description: "How to show AI tool calls and results in user-facing UI (no raw JSON dumps)"
+globs:
+  - "SampleRag.Client/src/**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# AI tool calls and results in the UI
+
+- **Never** show tool **arguments** or **execution results** as raw `JSON.stringify` output inside `<pre>`, monospace code blocks, or “debug JSON” panels in **user-facing** chat or assistant UI.
+- Prefer **structured, readable layout**: headings, `<dl>` / labeled rows, lists, timestamps formatted with `toLocaleString`, document hits with document id + page + snippet text, etc.
+- Add or extend **tool-specific** presenters (e.g. internal search vs current time vs unknown tool) when enums or API shapes are known; fall back to a **recursive “friendly value”** renderer (lists, labeled object fields, plain text) that stays human-readable—not a single blob of JSON.
+- Search / RAG results: show **queries, scope, and hit cards** (or equivalent), not a serialized API payload.
+- This does not forbid JSON in **logs**, **dev-only** tools, or **API** layers—only in UI meant for end users.

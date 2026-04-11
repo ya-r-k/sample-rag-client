@@ -1,0 +1,30 @@
+# sample-rag-client Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-02-15
+
+## Active Technologies
+
+- TypeScript 5.8+, React 19 + Vite v6+, TanStack Query v5.59+, Zustand v5, React Router v7, Framer Motion v12, react-i18next v15, Tailwind v3.4+, shadcn/ui, react-dropzone (001-rag-chat-client)
+
+## Project Structure
+
+```text
+backend/
+frontend/
+tests/
+```
+
+## Commands
+
+npm test; npm run lint
+
+## Code Style
+
+TypeScript 5.8+, React 19: Follow standard conventions
+
+## Recent Changes
+
+- 001-rag-chat-client: Added TypeScript 5.8+, React 19 + Vite v6+, TanStack Query v5.59+, Zustand v5, React Router v7, Framer Motion v12, react-i18next v15, Tailwind v3.4+, shadcn/ui, react-dropzone
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

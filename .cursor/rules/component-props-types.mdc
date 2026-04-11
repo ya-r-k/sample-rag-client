@@ -1,0 +1,16 @@
+---
+description: "Colocate exported component prop types in *.props.ts next to the component"
+globs:
+  - "SampleRag.Client/src/features/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/pages/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/widgets/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/entities/**/ui/**/*.tsx"
+alwaysApply: false
+---
+
+# Component props types (`*.props.ts`)
+
+- For any **exported** UI component, define its **public props** in a colocated file named **`<component-name>.props.ts`** (same folder as `<component-name>.tsx`).
+- Export the props type from that file (e.g. `MessageGenerationStepsProps`) and import it in the component. Do **not** leave large `type FooProps = { ... }` blocks at the top of the `.tsx` when the component is exported and reused.
+- Internal-only props for a private subcomponent in the same folder may stay next to that subcomponent’s file or use a local `type` if the subcomponent is not exported.
+- This keeps prop contracts visible for reviews and matches hook colocation (`*.hook.ts`).

@@ -39,15 +39,10 @@ export async function getScopes(params?: ListScopesParams): Promise<ScopeDto[]> 
 
 /** POST /api/knowledgescopes — create scope(s). Body: single or array. Returns 201 + created scope(s). */
 export async function createScope(body: CreateScopeRequest[]): Promise<ScopeDto> {
-  console.log('body', body)
-  
   const result = await apiPost<CreateScopeRequest[], ScopeDto[] | ScopeDto[]>(
     '/api/knowledgescopes',
     body,
   )
-
-  
-  console.log('result', result)
 
   return Array.isArray(result) ? result[0] : result
 }

@@ -55,6 +55,30 @@
     "ariaLabel": "User query input",
     "sendAriaLabel": "Send"
   },
+  "generationSteps": {
+    "reasoningSummary": "Model reasoning process",
+    "searchDocs": "Search in internal documentation",
+    "searchDocsWithQuery": "Search in internal documentation — {{query}}",
+    "currentTime": "Determine current time",
+    "unknownTool": "Tool call",
+    "callDetails": "Call details",
+    "searchRequest": "Search request",
+    "searchQuery": "Query",
+    "searchOutcomeIntro": "What the search returned (structured for readability):",
+    "callContext": "Request context",
+    "callParameters": "Parameters — {{tool}}",
+    "additionalParameters": "Additional parameters",
+    "knowledgeScope": "Knowledge scope",
+    "autoScope": "Automatic scope selection",
+    "yes": "Yes",
+    "no": "No",
+    "toolResult": "Result",
+    "emptyValue": "No value",
+    "emptyList": "No items",
+    "truncated": "…",
+    "andMoreItems": "… and {{count}} more",
+    "resultPage": "Page {{page}}"
+  },
   "common": {
     "mainNavigation": "Main navigation",
     "logoAlt": "Logo"

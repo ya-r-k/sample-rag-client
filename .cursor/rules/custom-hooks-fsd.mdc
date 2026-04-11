@@ -1,0 +1,39 @@
+---
+description: "Extract complex component hook logic into a colocated .hook.ts file"
+globs:
+  - "SampleRag.Client/src/features/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/pages/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/widgets/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/**/*.hook.ts"
+alwaysApply: false
+---
+
+# Complex Hook Extraction Rule (FSD + React + Query + Zustand)
+
+## When extraction is mandatory
+- If a component has complex hook-heavy logic, extract it into ONE custom hook and keep the component focused on rendering.
+- Treat logic as complex when any of these is true:
+  - 2+ `useEffect` blocks, or
+  - 3+ React hooks (`useState`, `useMemo`, `useCallback`, `useRef`, `useEffect`) combined with async/store synchronization, or
+  - Query/load + store sync + filter/select/reset behavior all inside the component.
+- **Count toward the hook total** (for the 3+ threshold): `useTranslation`, `useParams`, `useNavigate`, and similar framework hooks—not only `useState`/`useEffect`.
+- If a hook is **imported by a parent/sibling** (e.g. resolving Zustand state for a list item), it MUST live in its own **`use-<domain>.hook.ts`** file in the same folder, not inside the child presentation component’s module.
+
+## What to extract
+- Move all related stateful behavior (querying, local state, derived filtering, selection synchronization, resets, side effects) into one domain hook.
+- Component should mostly consume a compact hook API:
+  - Inputs: value, callbacks, optional params.
+  - Outputs: data/options, loading/error flags, derived values, event handlers.
+
+## Placement and file naming (this project)
+- Colocate the hook with its UI component in the same folder.
+- Name the file `<component-name>.hook.ts` (e.g. `query-input.hook.ts` exporting `useQueryInput`).
+- Hooks primarily tied to one component but named with a **`use` prefix** (e.g. `useStepsForAssistantMessage`) may use **`use-<slug>.hook.ts`** in that folder so parents can import them without pulling the whole child component file.
+- If the same hook is reused by multiple features without feature-specific dependencies, move to `SampleRag.Client/src/shared/lib/hooks/use<Domain>.ts` and keep the `use*` file name there.
+- Do not leave complex orchestration inline in the `.tsx` file when the criteria above apply.
+
+## Naming and quality
+- Hook names must be explicit and domain-oriented (`useScopeSelector`, `useUploadDocumentForm`, `useChatComposer`).
+- Keep hook return type stable and minimal; expose behavior, not implementation internals.
+- Prefer typed inputs/outputs; use generics only when the hook is genuinely reusable.
+- Avoid duplication: when a component reaches the complexity criteria above, extraction is required.

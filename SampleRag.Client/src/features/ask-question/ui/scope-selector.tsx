@@ -6,45 +6,31 @@ import {
   ComboboxOptions,
 } from '@headlessui/react'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { cn } from '../../../shared/lib/cn'
+import { useScopeSelector } from './scope-selector.hook'
+import { ScopeSelectorProps } from './scope-selector.props'
 
 export type ScopeItem = {
   id: string
   name: string
 }
 
-type ScopeSelectorProps = {
-  scopes: ScopeItem[]
-  value: string | null
-  onChange: (scopeId: string | null) => void
-  placeholder?: string
-  disabled?: boolean
-  className?: string
-}
-
 export function ScopeSelector({
-  scopes,
   value,
   onChange,
   placeholder,
   disabled,
   className,
+  flipOptionsUp = false,
 }: ScopeSelectorProps) {
-  const { t } = useTranslation()
-  const [query, setQuery] = useState('')
+  const {
+    t,
+    setQuery,
+    filteredScopes,
+    selected,
+    effectivePlaceholder,
+  } = useScopeSelector({ value, onChange, placeholder })
 
-  const filteredScopes =
-    query === ''
-      ? scopes
-      : scopes.filter((scope) => scope.name.toLowerCase().includes(query.toLowerCase()))
-
-  const selected = scopes.find((s) => s.id === value)
-  const effectivePlaceholder = placeholder ?? t('documentsPage.selectScope')
-
-console.log(filteredScopes)
-  
   return (
     <Combobox
       value={selected ?? null}
@@ -68,7 +54,10 @@ console.log(filteredScopes)
           <ChevronDown className="h-4 w-4" />
         </ComboboxButton>
         <ComboboxOptions
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-muted bg-background py-1 shadow-lg"
+          className={cn(
+            'absolute left-0 right-0 z-50 max-h-60 w-full overflow-auto rounded-md border border-muted bg-background py-1 shadow-lg',
+            flipOptionsUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
         >
           {filteredScopes.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">

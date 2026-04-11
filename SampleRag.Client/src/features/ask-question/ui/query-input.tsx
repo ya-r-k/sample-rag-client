@@ -1,52 +1,47 @@
-import { useState, useCallback } from 'react'
 import { Button } from '../../../shared/ui/button'
 import { cn } from '../../../shared/lib/cn'
 import { ArrowUp } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { ScopeSelector } from './scope-selector'
+import { QueryInputProps } from './query-input.props'
+import { useQueryInput } from './query-input.hook'
 
-type QueryInputProps = {
-  onSubmit: (text: string) => void
-  disabled?: boolean
-  placeholder?: string
-  className?: string
-}
-
-export function QueryInput({
-  onSubmit,
-  disabled = false,
-  placeholder,
-  className,
-}: QueryInputProps) {
-  const { t } = useTranslation()
-  const [value, setValue] = useState('')
-  const effectivePlaceholder = placeholder ?? t('chat.placeholderAsk')
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      const trimmed = value.trim()
-      if (trimmed && !disabled) {
-        onSubmit(trimmed)
-        setValue('')
-      }
-    },
-    [value, disabled, onSubmit],
-  )
+export function QueryInput(props: QueryInputProps) {
+  const {
+    t,
+    text,
+    effectivePlaceholder,
+    scopeId,
+    setScopeId,
+    isScopeInvalid,
+    handleSubmit,
+    handleContentInput,
+    handlePaste,
+    disabled,
+    className,
+    flipOptionsUp,
+    containerRef,
+    editorRef,
+  } = useQueryInput(props)
 
   return (
-    <div className={cn("max-w-3xl w-full bg-white dark:bg-gray-900 outline-none flex items-center border rounded-2xl transition-all duration-75 border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-xl px-4 py-3 gap-2", className)}>
-      <form onSubmit={handleSubmit} className='w-full h-full grid grid-cols-[1fr_1fr_1fr] grid-rows-[1fr_auto]'>
+    <div
+      ref={containerRef}
+      className={cn(
+        'max-w-3xl w-full bg-white dark:bg-gray-900 outline-none flex items-center border rounded-2xl transition-all duration-75 border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md hover:shadow-md dark:hover:shadow-xl px-4 py-3 gap-2',
+        className,
+      )}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="w-full h-full grid grid-cols-[1fr_1fr_1fr] grid-rows-[1fr_auto] gap-y-2"
+      >
         <div
+          ref={editorRef}
           id="user-query-input"
           contentEditable={true}
           suppressContentEditableWarning={true}
-          onInput={(e) => {
-            if (e.currentTarget.innerHTML === '<br>') {
-              e.currentTarget.innerHTML = ''
-            }
-            
-            setValue(e.currentTarget.textContent.trim() || '')
-          }}
+          onInput={handleContentInput}
+          onPaste={handlePaste}
           role="textbox"
           aria-placeholder={effectivePlaceholder}
           aria-label={t('queryInput.ariaLabel')}
@@ -61,14 +56,30 @@ export function QueryInput({
             resize-none outline-none selection:bg-blue-200 
             dark:selection:bg-blue-800/20 
             p-0 min-h-[2.5rem]"
+        />
+        <div
+          className={cn(
+            'col-start-1 col-end-3 row-start-2 row-end-3 w-full h-full flex justify-start pr-2 rounded-md transition-colors',
+            isScopeInvalid && 'ring-1 ring-red-500',
+          )}
+        >
+          <ScopeSelector
+            value={scopeId}
+            onChange={setScopeId}
+            disabled={disabled}
+            className="w-full max-w-56"
+            placeholder={t('documentsPage.selectScope')}
+            flipOptionsUp={flipOptionsUp}
           />
-        <div className='col-start-3 col-end-4 row-start-2 row-end-3 w-full h-full flex justify-end'>
-          <Button 
-            className='transition-all duration-200 rounded-full aspect-square flex items-center justify-center h-7 w-7 shrink-0 bg-white text-gray-900' 
-            type="submit" 
-            disabled={!value.trim()}
-            aria-label={t('queryInput.sendAriaLabel')}>
-            <ArrowUp className='w-3 h-3' />
+        </div>
+        <div className="col-start-3 col-end-4 row-start-2 row-end-3 w-full h-full flex justify-end">
+          <Button
+            className="transition-all duration-200 rounded-full aspect-square flex items-center justify-center h-7 w-7 shrink-0 bg-white text-gray-900"
+            type="submit"
+            disabled={!text.trim() || disabled}
+            aria-label={t('queryInput.sendAriaLabel')}
+          >
+            <ArrowUp className="w-3 h-3" />
           </Button>
         </div>
       </form>

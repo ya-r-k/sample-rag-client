@@ -43,7 +43,7 @@ SampleRag.Client/package-lock.json
 **/SampleRag.Client.esproj.user
 
 # AI IDEs
-**/.cursor/
+**/.cursor/commands/speckit.*.*
 
 # Visual Studio
 **/.vs

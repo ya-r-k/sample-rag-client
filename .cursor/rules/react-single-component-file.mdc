@@ -1,0 +1,16 @@
+---
+description: "One primary exported UI component per file; split siblings into separate modules"
+globs:
+  - "SampleRag.Client/src/features/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/pages/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/widgets/**/ui/**/*.tsx"
+  - "SampleRag.Client/src/entities/**/ui/**/*.tsx"
+alwaysApply: false
+---
+
+# Single exported component per file
+
+- A `*.tsx` file under `features/`, `pages/`, `widgets/`, or `entities/` **ui** folders MUST export **at most one** primary React component meant for use outside that file (e.g. default view or main block).
+- Do **not** define additional named React components in the same file **unless** they are trivial one-liners used only as internal JSX sugar (and never need their own hooks).
+- If you need a second structural component (e.g. a turn/row wrapper, a panel, or anything wrapped in `<Fragment>` only to return multiple roots), **move it to its own file** next to the parent: `assistant-message-turn.tsx`, `message-row.tsx`, etc., and import it.
+- **Never** stack multiple substantial components in one file to “save files”; colocated siblings keep navigation and reviews clear.

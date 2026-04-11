@@ -27,7 +27,7 @@ export function ShareChatForm({ chatId, className }: ShareChatFormProps) {
     onSuccess: () => {
       setValue('')
       setError(null)
-      queryClient.invalidateQueries({ queryKey: ['chats'] })
+      queryClient.invalidateQueries({ queryKey: ['chats', 20] })
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
     },
     onError: (err: unknown) => {
