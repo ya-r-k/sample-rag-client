@@ -49,7 +49,16 @@
     "deleteChat": "Удалить чат",
     "sourcePage": "[Источник: стр. {{page}}]",
     "sourceWithDocName": "{{name}} · стр. {{page}}",
-    "newChatTitle": "Чат Sample RAG Client"
+    "newChatTitle": "Чат Sample RAG Client",
+    "lastUpdated": {
+      "justNow": "только что",
+      "minutesAgo_one": "{{count}} минуту назад",
+      "minutesAgo_few": "{{count}} минуты назад",
+      "minutesAgo_many": "{{count}} минут назад",
+      "hoursAgo_one": "{{count}} час назад",
+      "hoursAgo_few": "{{count}} часа назад",
+      "hoursAgo_many": "{{count}} часов назад"
+    }
   },
   "queryInput": {
     "ariaLabel": "Поле ввода вопроса",

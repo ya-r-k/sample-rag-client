@@ -73,12 +73,13 @@ export function useChatPage() {
           setIsSubmitting,
           navigate,
           t,
+          queryClient,
         },
         chatId,
         scopeId,
         text,
       ),
-    [hasDocuments, isSubmitting, navigate, t],
+    [hasDocuments, isSubmitting, navigate, queryClient, t],
   )
 
   const handleDeleteChat = useCallback(

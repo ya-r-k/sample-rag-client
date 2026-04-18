@@ -1,5 +1,6 @@
 import type { NavigateFunction } from 'react-router-dom'
 import type { TFunction } from 'i18next'
+import type { QueryClient } from '@tanstack/react-query'
 import {
   sendMessage,
   GenerationStep,
@@ -9,12 +10,15 @@ import { useChatsStore } from '../../../shared/store/chats-store'
 import { useMessagesStore } from '../../../shared/store/messages-store'
 import { useMessageGenerationStepsStore } from '../../../shared/store/message-generation-steps-store'
 
+const CHATS_QUERY_KEY = ['chats', 20] as const
+
 export type ChatPageSubmitDeps = {
   isSubmitting: boolean
   hasDocuments: boolean
   setIsSubmitting: (value: boolean) => void
   navigate: NavigateFunction
   t: TFunction
+  queryClient: QueryClient
 }
 
 function routeStreamEventToGenerationSteps(
@@ -36,6 +40,7 @@ export async function submitChatMessage(
     setIsSubmitting,
     navigate,
     t,
+    queryClient,
   } = deps
 
   if (isSubmitting) return
@@ -124,6 +129,7 @@ export async function submitChatMessage(
         generationStepsStore.clearTurn(turnId)
       }
       generationStepsStore.finishTurn(turnId)
+      void queryClient.invalidateQueries({ queryKey: CHATS_QUERY_KEY })
     }
   } catch (err) {
     console.error('Send message failed:', err)

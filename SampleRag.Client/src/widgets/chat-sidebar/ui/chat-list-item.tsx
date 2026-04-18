@@ -1,25 +1,34 @@
 import { cn } from '../../../shared/lib/cn'
+import { useChatListItem } from './chat-list-item.hook'
 
 export type ChatListItemProps = {
-  id: string
   title: string
   fallbackTitle: string
+  lastUpdatedAt?: string
   isActive?: boolean
   onClick: () => void
   className?: string
 }
 
 /**
- * Single chat entry in the sidebar list. Displays chat title; click selects chat.
+ * Single chat entry in the sidebar list. Displays chat title and last activity; click selects chat.
  */
 export function ChatListItem({
-  id,
   title,
   fallbackTitle,
+  lastUpdatedAt,
   isActive = false,
   onClick,
   className,
 }: ChatListItemProps) {
+  const { lastUpdatedLabel } = useChatListItem({ lastUpdatedAt })
+
+  const displayTitle = title || fallbackTitle
+  const aria =
+    lastUpdatedLabel.length > 0
+      ? `${displayTitle}, ${lastUpdatedLabel}`
+      : displayTitle
+
   return (
     <button
       type="button"
@@ -31,11 +40,19 @@ export function ChatListItem({
         className,
       )}
       aria-current={isActive ? 'true' : undefined}
-      aria-label={title || fallbackTitle}
+      aria-label={aria}
     >
       <span className="block truncate" title={title}>
-        {title || fallbackTitle}
+        {displayTitle}
       </span>
+      {lastUpdatedLabel.length > 0 ? (
+        <span
+          className="mt-0.5 block truncate text-xs text-muted-foreground"
+          title={lastUpdatedLabel}
+        >
+          {lastUpdatedLabel}
+        </span>
+      ) : null}
     </button>
   )
 }
