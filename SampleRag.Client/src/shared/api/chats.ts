@@ -10,6 +10,8 @@ export type ChatDto = {
   name: string
   scopeId: string
   ownerIds: string[]
+  /** ISO 8601; last user+AI turn (AI message CreatedAt). */
+  lastUpdatedAt?: string
 }
 
 export type MessageDto = {

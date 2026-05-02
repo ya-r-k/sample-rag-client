@@ -49,7 +49,14 @@
     "deleteChat": "Delete chat",
     "sourcePage": "[Source: p.{{page}}]",
     "sourceWithDocName": "{{name}} · p.{{page}}",
-    "newChatTitle": "Sample RAG Client Chat"
+    "newChatTitle": "Sample RAG Client Chat",
+    "lastUpdated": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago"
+    }
   },
   "queryInput": {
     "ariaLabel": "User query input",

@@ -82,9 +82,9 @@ export function ChatSidebar({ className, activeChatId }: ChatSidebarProps) {
             filteredChats.map((chat) => (
               <ChatListItem
                 key={chat.id}
-                id={chat.id}
                 title={chat.name}
                 fallbackTitle={t('chat.newChatName')}
+                lastUpdatedAt={chat.lastUpdatedAt}
                 isActive={activeChatId === chat.id}
                 onClick={() => handleSelectChat(chat.id)}
               />
