@@ -12,6 +12,9 @@ export type MessageDto = {
   createdAt?: string
   aiGenerated: boolean
   sourceReferences?: SourceDto[]
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
 }
 
 export type ChatDto = {
@@ -64,6 +67,9 @@ export type MessagePartResponse = {
   newChatId?: string
   toolsCalls?: ToolCallResponse[]
   toolsResults?: ToolResultResponse[]
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
 }
 
 /** SendMessageRequest — omit/null chatId when starting a new chat. */

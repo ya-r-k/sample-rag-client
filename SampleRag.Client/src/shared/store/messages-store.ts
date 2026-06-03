@@ -41,6 +41,9 @@ function ensureAssistantMessage(
     text: '',
     aiGenerated: true,
     sourceReferences: [],
+    promptTokens: undefined,
+    completionTokens: undefined,
+    totalTokens: undefined,
     chatId: targetChatId,
   }
   const next = [...items]
@@ -108,6 +111,9 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
             text: '',
             aiGenerated: true,
             sourceReferences: [],
+            promptTokens: undefined,
+            completionTokens: undefined,
+            totalTokens: undefined,
             chatId,
           },
         ],
@@ -127,6 +133,9 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
               text: '',
               aiGenerated: true,
               sourceReferences: [],
+              promptTokens: undefined,
+              completionTokens: undefined,
+              totalTokens: undefined,
               chatId,
             },
           ],
@@ -149,6 +158,9 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
               text: '',
               aiGenerated: true,
               sourceReferences: [],
+              promptTokens: undefined,
+              completionTokens: undefined,
+              totalTokens: undefined,
               chatId,
             },
           ],
@@ -158,22 +170,35 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
 
   applyMessagePart: (chatId, part, userText) =>
     set((state) => {
-      if (part.step !== GenerationStep.ResponseMessage) {
-        return state
-      }
-      if (part.text === undefined) {
-        return state
-      }
       const prev = state.byChatId[chatId] ?? []
       const { next, assistantIndex } = ensureAssistantMessage(prev, chatId, userText)
       const currentAssistant = next[assistantIndex]
-      const currentText = currentAssistant.text ?? ''
-      next[assistantIndex] = {
-        ...currentAssistant,
-        chatId,
-        aiGenerated: true,
-        text: `${currentText}${part.text}`,
+
+      // Apply text for ResponseMessage step
+      if (part.step === GenerationStep.ResponseMessage && part.text !== undefined) {
+        const currentText = currentAssistant.text ?? ''
+        next[assistantIndex] = {
+          ...currentAssistant,
+          chatId,
+          aiGenerated: true,
+          text: `${currentText}${part.text}`,
+        }
       }
+
+      // Apply token usage metrics if available
+      if (
+        part.promptTokens !== undefined ||
+        part.completionTokens !== undefined ||
+        part.totalTokens !== undefined
+      ) {
+        next[assistantIndex] = {
+          ...next[assistantIndex],
+          promptTokens: part.promptTokens ?? next[assistantIndex].promptTokens,
+          completionTokens: part.completionTokens ?? next[assistantIndex].completionTokens,
+          totalTokens: part.totalTokens ?? next[assistantIndex].totalTokens,
+        }
+      }
+
       return {
         byChatId: {
           ...state.byChatId,
