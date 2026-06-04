@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getScopes, createScope } from '../../../shared/api/scopes'
+import { getScopes, createScope, deleteScope, type ScopeDto } from '../../../shared/api/scopes'
 import { cn } from '../../../shared/lib/cn'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../../shared/ui/button'
@@ -13,6 +13,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
   const { t } = useTranslation()
   const [lastId, setLastId] = useState(undefined as string | undefined)
   const [newName, setNewName] = useState('')
+  const [scopeToDelete, setScopeToDelete] = useState<ScopeDto | null>(null)
   const queryClient = useQueryClient()
 
   const { data: scopes = [] } = useQuery({
@@ -26,6 +27,14 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
     mutationFn: createScope,
     onSuccess: () => {
       setNewName('')
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteScope,
+    onSuccess: () => {
+      setScopeToDelete(null)
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })
@@ -61,6 +70,15 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
                 <p className="mt-1 text-xs text-muted-foreground truncate" title={scope.id}>
                   {scope.id}
                 </p>
+              </div>
+              <div className="mt-4 flex items-center justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setScopeToDelete(scope)}
+                  className="rounded-md border border-destructive bg-red-600 px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {t('scopesPage.delete')}
+                </Button>
               </div>
             </div>
           ))}
@@ -112,6 +130,51 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
           </Button>
         </div>
       </section>
+
+      {scopeToDelete && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-lg border border-muted bg-background p-5 shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t('scopesPage.deleteModalTitle')}
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('scopesPage.deleteModalDescription', { name: scopeToDelete.name })}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setScopeToDelete(null)}
+                className="rounded-md border border-muted bg-background px-2 py-1 text-xs text-foreground hover:bg-muted"
+              >
+                {t('scopesPage.close')}
+              </Button>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => setScopeToDelete(null)}
+                className="rounded-md border border-muted bg-background px-3 py-1 text-xs text-foreground hover:bg-muted"
+              >
+                {t('scopesPage.cancel')}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => deleteMutation.mutate(scopeToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="rounded-md border border-destructive bg-red-600 px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleteMutation.isPending ? t('scopesPage.deleting') : t('scopesPage.delete')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
