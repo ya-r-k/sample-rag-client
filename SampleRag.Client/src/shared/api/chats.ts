@@ -10,6 +10,7 @@ export type ChatDto = {
   name: string
   scopeId: string
   ownerIds: string[]
+  hasOutdatedSources?: boolean
 }
 
 export type MessageDto = {

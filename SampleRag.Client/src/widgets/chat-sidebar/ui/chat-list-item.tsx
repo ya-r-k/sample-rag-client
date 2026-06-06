@@ -4,6 +4,7 @@ export type ChatListItemProps = {
   id: string
   title: string
   fallbackTitle: string
+  badgeText?: string
   isActive?: boolean
   onClick: () => void
   className?: string
@@ -16,6 +17,7 @@ export function ChatListItem({
   id,
   title,
   fallbackTitle,
+  badgeText,
   isActive = false,
   onClick,
   className,
@@ -33,9 +35,16 @@ export function ChatListItem({
       aria-current={isActive ? 'true' : undefined}
       aria-label={title || fallbackTitle}
     >
-      <span className="block truncate" title={title}>
-        {title || fallbackTitle}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="block truncate" title={title}>
+          {title || fallbackTitle}
+        </span>
+        {badgeText && (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+            {badgeText}
+          </span>
+        )}
+      </div>
     </button>
   )
 }

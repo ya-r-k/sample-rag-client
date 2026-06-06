@@ -16,6 +16,7 @@ export function useChatSidebar() {
   const { data: chatsQueryData, dataUpdatedAt } = useQuery({
     queryKey: CHATS_QUERY_KEY,
     queryFn: () => getChats({ batchSize: 20 }),
+    refetchOnMount: 'always',
   })
 
   useEffect(() => {

@@ -12,6 +12,7 @@ export type MessageDto = {
   createdAt?: string
   aiGenerated: boolean
   sourceReferences?: SourceDto[]
+  usesOutdatedSources?: boolean
 }
 
 export type ChatDto = {
@@ -19,6 +20,7 @@ export type ChatDto = {
   name: string
   scopeId: string
   ownerIds: string[]
+  hasOutdatedSources?: boolean
 }
 
 export type SourceDto = {

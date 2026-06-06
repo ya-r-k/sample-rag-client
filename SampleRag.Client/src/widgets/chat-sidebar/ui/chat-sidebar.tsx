@@ -85,6 +85,7 @@ export function ChatSidebar({ className, activeChatId }: ChatSidebarProps) {
                 id={chat.id}
                 title={chat.name}
                 fallbackTitle={t('chat.newChatName')}
+                badgeText={chat.hasOutdatedSources ? t('chat.outdatedSourcesBadge') : undefined}
                 isActive={activeChatId === chat.id}
                 onClick={() => handleSelectChat(chat.id)}
               />

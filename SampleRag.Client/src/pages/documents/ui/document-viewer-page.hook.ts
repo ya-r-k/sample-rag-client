@@ -10,7 +10,11 @@ export function useDocumentViewerPage() {
 
   const localPath = searchParams.get('path') ?? ''
   const documentName = searchParams.get('name') ?? t('documentViewer.untitled')
-  const pageNumber = searchParams.get('page') ?? 1
+  const pageNumber = Number(searchParams.get('page') ?? 1)
+  const isOutOfDate = (() => {
+    const value = searchParams.get('isOutOfDate')
+    return value === '1' || value === 'true'
+  })()
 
   const { data: blobUrl, isLoading, error } = useQuery({
     queryKey: ['document-viewer', localPath],
@@ -39,5 +43,6 @@ export function useDocumentViewerPage() {
     isLoading,
     error,
     title,
+    isOutOfDate,
   }
 }

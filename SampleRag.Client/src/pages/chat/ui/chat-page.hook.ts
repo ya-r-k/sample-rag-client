@@ -21,6 +21,10 @@ export function useChatPage() {
   const [showShare, setShowShare] = useState(false)
   const [hasDocuments] = useState(true)
 
+  const currentChat = useChatsStore((s) =>
+    chatId ? s.chats.find((c) => c.id === chatId) ?? null : null,
+  )
+
   const displayMessages = useMessagesStore((s) =>
     chatId ? (s.byChatId[chatId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES,
   )
@@ -64,6 +68,30 @@ export function useChatPage() {
     [loadedDocuments],
   )
 
+
+  useEffect(() => {
+    if (!chatId) return
+    const msgs = displayMessages
+    if (!msgs || msgs.length === 0) return
+
+    const recomputed = msgs.map((m) => {
+      const docIds = new Set<string>(
+        (m.sourceReferences ?? []).map((s) => s.documentId).filter(Boolean),
+      )
+      const usesOutdated = [...docIds].some((id) => documentsById[id]?.isOutOfDate)
+      if (m.usesOutdatedSources === usesOutdated) return m
+      return { ...m, usesOutOfDateSources: usesOutdated, usesOutdatedSources: usesOutdated }
+    })
+
+    const changed =
+      recomputed.length !== msgs.length ||
+      recomputed.some((r, i) => r.usesOutdatedSources !== msgs[i].usesOutdatedSources)
+
+    if (changed) {
+      useMessagesStore.getState().setMessagesForChat(chatId, recomputed)
+    }
+  }, [chatId, displayMessages, documentsById])
+
   const handleSubmit = useCallback(
     (chatId: string | null, scopeId: string | null, text: string) =>
       submitChatMessage(
@@ -90,7 +118,7 @@ export function useChatPage() {
     [navigate, queryClient, t],
   )
 
-  const canSubmit = !isSubmitting && !isDeleting
+  const canSubmit = !isSubmitting && !isDeleting && !currentChat?.hasOutdatedSources
   const showConversation = Boolean(chatId)
 
   return {

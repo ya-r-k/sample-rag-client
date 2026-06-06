@@ -28,6 +28,11 @@ export function ChatHeading({ chatId, showShare, isDeleting, setShowShare, handl
           <h2 className="text-lg font-semibold text-foreground">
             {chat?.name ?? t('chat.newChatName')}
           </h2>
+          {chat?.hasOutdatedSources && (
+            <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 dark:border-red-600/40 dark:bg-red-900/10 dark:text-red-200">
+              {t('chat.outdatedChatWarning')}
+            </div>
+          )}
         </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex gap-2">
