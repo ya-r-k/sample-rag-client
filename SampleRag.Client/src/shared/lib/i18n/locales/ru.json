@@ -151,6 +151,12 @@
     "scopeNamePlaceholder": "Название области",
     "saving": "Сохранение...",
     "save": "Сохранить",
+    "delete": "Удалить",
+    "deleting": "Удаление...",
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "deleteModalTitle": "Удаление области",
+    "deleteModalDescription": "Удалить область \"{{name}}\"? Это действие нельзя отменить.",
     "previous": "Назад",
     "next": "Вперед"
   },

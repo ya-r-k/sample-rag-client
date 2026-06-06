@@ -1,9 +1,6 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { listDocuments, deleteDocument, uploadDocument, type DocumentDto } from '../../../shared/api/documents'
-import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
-import { useTranslation } from 'react-i18next'
+import { useDocumentsPage } from './documents-page.hook'
+import { DocumentsPageModal } from './documents-page-modal'
 
 type DocumentsPageProps = {
   isAdmin?: boolean
@@ -14,48 +11,19 @@ type DocumentsPageProps = {
  * Note: API has no GET /documents; list is left as a simple placeholder.
  */
 export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
-  const { t } = useTranslation()
-  const [lastId, setLastId] = useState<string | undefined>(undefined)
-  const batchSize = 10
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
-  const [editingDocument, setEditingDocument] = useState<DocumentDto | null>(null)
-
-  const queryClient = useQueryClient()
-
-  const { data: documents = [] } = useQuery({
-    queryKey: ['documents', { lastId, batchSize }],
-    queryFn: () => listDocuments({ lastId, batchSize }),
-  })
-
-  const hasNextPage = documents.length === batchSize
-
-  const createMutation = useMutation({
-    mutationFn: async (payload: { name: string; scopeId: string; file: File }) =>
-      uploadDocument(payload),
-    onSuccess: () => {
-      setModalMode(null)
-      setEditingDocument(null)
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
-  })
-
-  const editMutation = useMutation({
-    mutationFn: async (payload: { id: string; name: string; scopeId: string }) => payload,
-    onSuccess: ({ id, name, scopeId }) => {
-      queryClient.setQueriesData<DocumentDto[]>({ queryKey: ['documents'] }, (prev) =>
-        (prev ?? []).map((doc) => (doc.id === id ? { ...doc, name, scopeId } : doc)),
-      )
-      setModalMode(null)
-      setEditingDocument(null)
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteDocument,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
-  })
+  const {
+    t,
+    documents,
+    modalMode,
+    setModalMode,
+    editingDocument,
+    setEditingDocument,
+    createMutation,
+    editMutation,
+    deleteMutation,
+    handleLoadMore,
+    isMoreDisabled,
+  } = useDocumentsPage(isAdmin)
 
   if (!isAdmin) {
     return (
@@ -107,6 +75,11 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       <p className="truncate font-medium text-foreground" title={doc.name}>
                         {doc.name}
                       </p>
+                      <div>
+                        <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
+                          {doc.scopeName}
+                        </span>
+                      </div>
                       {doc.localLink && (
                         <a
                           href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}`}
@@ -155,88 +128,48 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
             )}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            {hasNextPage && <Button
-                onClick={() => setLastId(documents[documents.length - 1].id)}
+            {documents.length > 0 && (
+              <Button
+                onClick={handleLoadMore}
+                disabled={isMoreDisabled}
                 className="rounded-md border border-muted bg-background px-3 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('documentsPage.moreDocuments')}
-              </Button>}
+              </Button>
+            )}
           </div>
         </div>
       </section>
 
       {modalMode && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-lg border border-muted bg-background p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {modalMode === 'create' ? t('documentsPage.modalTitle') : t('documentsPage.editModalTitle')}
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {modalMode === 'create'
-                    ? t('documentsPage.modalDescription')
-                    : t('documentsPage.editModalDescription')}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => {
-                  setModalMode(null)
-                  setEditingDocument(null)
-                }}
-                className="rounded-md border border-muted bg-background px-2 py-1 text-xs text-foreground hover:bg-muted"
-              >
-                {t('documentsPage.close')}
-              </Button>
-            </div>
-            <div className="mt-4 space-y-3">
-              {modalMode === 'create' ? (
-                <DocumentForm
-                  showFileField={true}
-                  requireFile={true}
-                  requireScope={true}
-                  isSubmitting={createMutation.isPending}
-                  submitLabel={t('documentsPage.uploadDocument')}
-                  submitPendingLabel={t('documentUpload.uploading')}
-                  onSubmit={(values) => {
-                    if (!values.scopeId || !values.file) {
-                      return
-                    }
-                    createMutation.mutate({
-                      name: values.name,
-                      scopeId: values.scopeId,
-                      file: values.file,
-                    })
-                  }}
-                />
-              ) : (
-                <DocumentForm
-                  initialName={editingDocument?.name ?? ''}
-                  initialScopeId={editingDocument?.scopeId ?? null}
-                  showFileField={false}
-                  requireFile={false}
-                  requireScope={true}
-                  isSubmitting={editMutation.isPending}
-                  submitLabel={t('documentsPage.saveChanges')}
-                  submitPendingLabel={t('documentsPage.savingChanges')}
-                  onSubmit={(values) => {
-                    if (!editingDocument || !values.scopeId) return
-                    editMutation.mutate({
-                      id: editingDocument.id,
-                      name: values.name,
-                      scopeId: values.scopeId,
-                    })
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <DocumentsPageModal
+          modalMode={modalMode}
+          editingDocument={editingDocument}
+          isCreateSubmitting={createMutation.isPending}
+          isEditSubmitting={editMutation.isPending}
+          onClose={() => {
+            setModalMode(null)
+            setEditingDocument(null)
+          }}
+          onCreateSubmit={(values) => {
+            if (!values.scopeId || !values.file) {
+              return
+            }
+            createMutation.mutate({
+              name: values.name,
+              scopeId: values.scopeId,
+              file: values.file,
+            })
+          }}
+          onEditSubmit={(values) => {
+            if (!editingDocument || !values.scopeId) return
+            editMutation.mutate({
+              id: editingDocument.id,
+              name: values.name,
+              scopeId: values.scopeId,
+            })
+          }}
+        />
       )}
     </div>
   )

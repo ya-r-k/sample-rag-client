@@ -149,6 +149,12 @@
     "scopeNamePlaceholder": "Scope name",
     "saving": "Saving...",
     "save": "Save",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "deleteModalTitle": "Delete scope",
+    "deleteModalDescription": "Delete scope \"{{name}}\"? This action cannot be undone.",
     "more": "More scopes..."
   },
   "createScope": {

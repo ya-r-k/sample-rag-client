@@ -24,6 +24,9 @@ alwaysApply: false
 - Component should mostly consume a compact hook API:
   - Inputs: value, callbacks, optional params.
   - Outputs: data/options, loading/error flags, derived values, event handlers.
+- For paginated list screens, keep the page accumulation logic inside the hook. "Load more" actions should append to the existing list rather than replace the already rendered items.
+- Prefer `useInfiniteQuery` for load-more pagination so the hook owns page merging and refetch behavior.
+- When a list item needs a related label from another query/source (for example, a document preview showing its knowledge scope name), resolve that label in the hook and pass down a ready-to-render value.
 
 ## Placement and file naming (this project)
 - Colocate the hook with its UI component in the same folder.
