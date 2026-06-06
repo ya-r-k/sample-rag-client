@@ -1,43 +1,26 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getScopes, createScope, deleteScope, type ScopeDto } from '../../../shared/api/scopes'
 import { cn } from '../../../shared/lib/cn'
-import { useTranslation } from 'react-i18next'
 import { Button } from '../../../shared/ui/button'
+import { useScopesPage } from './scopes-page.hook'
 
 type ScopesPageProps = {
   isAdmin?: boolean
 }
 
 export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
-  const { t } = useTranslation()
-  const [lastId, setLastId] = useState(undefined as string | undefined)
-  const [newName, setNewName] = useState('')
-  const [scopeToDelete, setScopeToDelete] = useState<ScopeDto | null>(null)
-  const queryClient = useQueryClient()
-
-  const { data: scopes = [] } = useQuery({
-    queryKey: ['groups', { batchSize: 10, lastId }],
-    queryFn: () => getScopes({ batchSize: 10, lastId }),
-  })
-
-  const hasNextPage = scopes.length === 10
-
-  const createMutation = useMutation({
-    mutationFn: createScope,
-    onSuccess: () => {
-      setNewName('')
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteScope,
-    onSuccess: () => {
-      setScopeToDelete(null)
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
+  const {
+    t,
+    scopes,
+    scopeToDelete,
+    setScopeToDelete,
+    newName,
+    setNewName,
+    createMutation,
+    deleteMutation,
+    hasNextPage,
+    handleCreateSubmit,
+    handleLoadMore,
+    isCreateDisabled,
+  } = useScopesPage(isAdmin)
 
   if (!isAdmin) {
     return (
@@ -92,12 +75,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
             </div>
             <form
               className="mt-3 space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-                const value = newName.trim()
-                if (!value || createMutation.isPending) return
-                createMutation.mutate([{ name: value }])
-              }}
+              onSubmit={handleCreateSubmit}
             >
               <input
                 type="text"
@@ -109,7 +87,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
               />
               <Button
                 type="submit"
-                disabled={createMutation.isPending || !newName.trim()}
+                disabled={isCreateDisabled}
                 className={cn(
                   'inline-flex items-center justify-center rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60',
                 )}
@@ -122,7 +100,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
 
         <div className="flex items-center justify-between gap-2">
           <Button
-            onClick={() => setLastId(scopes[scopes.length - 1].id)}
+            onClick={handleLoadMore}
             disabled={!hasNextPage}
             className="rounded-md border border-muted bg-background px-3 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >

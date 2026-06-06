@@ -1,9 +1,6 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { listDocuments, deleteDocument, uploadDocument, type DocumentDto } from '../../../shared/api/documents'
 import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
-import { useTranslation } from 'react-i18next'
+import { useDocumentsPage } from './documents-page.hook'
 
 type DocumentsPageProps = {
   isAdmin?: boolean
@@ -14,48 +11,19 @@ type DocumentsPageProps = {
  * Note: API has no GET /documents; list is left as a simple placeholder.
  */
 export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
-  const { t } = useTranslation()
-  const [lastId, setLastId] = useState<string | undefined>(undefined)
-  const batchSize = 10
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
-  const [editingDocument, setEditingDocument] = useState<DocumentDto | null>(null)
-
-  const queryClient = useQueryClient()
-
-  const { data: documents = [] } = useQuery({
-    queryKey: ['documents', { lastId, batchSize }],
-    queryFn: () => listDocuments({ lastId, batchSize }),
-  })
-
-  const hasNextPage = documents.length === batchSize
-
-  const createMutation = useMutation({
-    mutationFn: async (payload: { name: string; scopeId: string; file: File }) =>
-      uploadDocument(payload),
-    onSuccess: () => {
-      setModalMode(null)
-      setEditingDocument(null)
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
-  })
-
-  const editMutation = useMutation({
-    mutationFn: async (payload: { id: string; name: string; scopeId: string }) => payload,
-    onSuccess: ({ id, name, scopeId }) => {
-      queryClient.setQueriesData<DocumentDto[]>({ queryKey: ['documents'] }, (prev) =>
-        (prev ?? []).map((doc) => (doc.id === id ? { ...doc, name, scopeId } : doc)),
-      )
-      setModalMode(null)
-      setEditingDocument(null)
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteDocument,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
-  })
+  const {
+    t,
+    documents,
+    modalMode,
+    setModalMode,
+    editingDocument,
+    setEditingDocument,
+    createMutation,
+    editMutation,
+    deleteMutation,
+    handleLoadMore,
+    isMoreDisabled,
+  } = useDocumentsPage(isAdmin)
 
   if (!isAdmin) {
     return (
@@ -107,6 +75,9 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       <p className="truncate font-medium text-foreground" title={doc.name}>
                         {doc.name}
                       </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {t('generationSteps.knowledgeScope')}: {doc.scopeName}
+                      </p>
                       {doc.localLink && (
                         <a
                           href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}`}
@@ -155,12 +126,15 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
             )}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            {hasNextPage && <Button
-                onClick={() => setLastId(documents[documents.length - 1].id)}
+            {documents.length > 0 && (
+              <Button
+                onClick={handleLoadMore}
+                disabled={isMoreDisabled}
                 className="rounded-md border border-muted bg-background px-3 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('documentsPage.moreDocuments')}
-              </Button>}
+              </Button>
+            )}
           </div>
         </div>
       </section>
