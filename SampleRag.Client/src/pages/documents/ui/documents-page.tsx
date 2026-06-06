@@ -1,6 +1,6 @@
-import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
 import { useDocumentsPage } from './documents-page.hook'
+import { DocumentsPageModal } from './documents-page-modal'
 
 type DocumentsPageProps = {
   isAdmin?: boolean
@@ -142,77 +142,34 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
       </section>
 
       {modalMode && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-lg border border-muted bg-background p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {modalMode === 'create' ? t('documentsPage.modalTitle') : t('documentsPage.editModalTitle')}
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {modalMode === 'create'
-                    ? t('documentsPage.modalDescription')
-                    : t('documentsPage.editModalDescription')}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => {
-                  setModalMode(null)
-                  setEditingDocument(null)
-                }}
-                className="rounded-md border border-muted bg-background px-2 py-1 text-xs text-foreground hover:bg-muted"
-              >
-                {t('documentsPage.close')}
-              </Button>
-            </div>
-            <div className="mt-4 space-y-3">
-              {modalMode === 'create' ? (
-                <DocumentForm
-                  showFileField={true}
-                  requireFile={true}
-                  requireScope={true}
-                  isSubmitting={createMutation.isPending}
-                  submitLabel={t('documentsPage.uploadDocument')}
-                  submitPendingLabel={t('documentUpload.uploading')}
-                  onSubmit={(values) => {
-                    if (!values.scopeId || !values.file) {
-                      return
-                    }
-                    createMutation.mutate({
-                      name: values.name,
-                      scopeId: values.scopeId,
-                      file: values.file,
-                    })
-                  }}
-                />
-              ) : (
-                <DocumentForm
-                  initialName={editingDocument?.name ?? ''}
-                  initialScopeId={editingDocument?.scopeId ?? null}
-                  showFileField={false}
-                  requireFile={false}
-                  requireScope={true}
-                  isSubmitting={editMutation.isPending}
-                  submitLabel={t('documentsPage.saveChanges')}
-                  submitPendingLabel={t('documentsPage.savingChanges')}
-                  onSubmit={(values) => {
-                    if (!editingDocument || !values.scopeId) return
-                    editMutation.mutate({
-                      id: editingDocument.id,
-                      name: values.name,
-                      scopeId: values.scopeId,
-                    })
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <DocumentsPageModal
+          modalMode={modalMode}
+          editingDocument={editingDocument}
+          isCreateSubmitting={createMutation.isPending}
+          isEditSubmitting={editMutation.isPending}
+          onClose={() => {
+            setModalMode(null)
+            setEditingDocument(null)
+          }}
+          onCreateSubmit={(values) => {
+            if (!values.scopeId || !values.file) {
+              return
+            }
+            createMutation.mutate({
+              name: values.name,
+              scopeId: values.scopeId,
+              file: values.file,
+            })
+          }}
+          onEditSubmit={(values) => {
+            if (!editingDocument || !values.scopeId) return
+            editMutation.mutate({
+              id: editingDocument.id,
+              name: values.name,
+              scopeId: values.scopeId,
+            })
+          }}
+        />
       )}
     </div>
   )
