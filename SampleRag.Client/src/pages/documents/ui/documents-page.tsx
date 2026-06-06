@@ -75,9 +75,11 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       <p className="truncate font-medium text-foreground" title={doc.name}>
                         {doc.name}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {t('generationSteps.knowledgeScope')}: {doc.scopeName}
-                      </p>
+                      <div>
+                        <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
+                          {doc.scopeName}
+                        </span>
+                      </div>
                       {doc.localLink && (
                         <a
                           href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}`}
