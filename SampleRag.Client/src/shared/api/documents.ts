@@ -12,6 +12,7 @@ export type DocumentDto = {
   localLink?: string
   originalLink?: string
   scopeId: string
+  indexPercentage: number
 }
 
 /** UploadDocumentRequestModel — API expects JSON with base64 file content. */

@@ -144,6 +144,8 @@
     "noAccess": "This page is available to admins only.",
     "title": "Knowledge scopes",
     "subtitle": "View and manage scopes used for grouping documents.",
+    "documentsCount_one": "{{count}} document",
+    "documentsCount_other": "{{count}} documents",
     "addNewTitle": "Add new scope",
     "addNewDescription": "Enter a name and save to create a new scope.",
     "scopeNamePlaceholder": "Scope name",
