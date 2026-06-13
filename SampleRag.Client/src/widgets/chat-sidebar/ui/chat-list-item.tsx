@@ -54,9 +54,6 @@ export function ChatListItem({
           </span>
         )}
       </div>
-      <span className="block truncate" title={title}>
-        {displayTitle}
-      </span>
       {lastUpdatedLabel.length > 0 ? (
         <span
           className="mt-0.5 block truncate text-xs text-muted-foreground"
