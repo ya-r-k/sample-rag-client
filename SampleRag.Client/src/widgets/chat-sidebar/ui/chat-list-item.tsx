@@ -4,6 +4,7 @@ import { useChatListItem } from './chat-list-item.hook'
 export type ChatListItemProps = {
   title: string
   fallbackTitle: string
+  badgeText?: string
   lastUpdatedAt?: string
   isActive?: boolean
   onClick: () => void
@@ -16,6 +17,7 @@ export type ChatListItemProps = {
 export function ChatListItem({
   title,
   fallbackTitle,
+  badgeText,
   lastUpdatedAt,
   isActive = false,
   onClick,
@@ -42,9 +44,16 @@ export function ChatListItem({
       aria-current={isActive ? 'true' : undefined}
       aria-label={aria}
     >
-      <span className="block truncate" title={title}>
-        {displayTitle}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="block truncate" title={title}>
+          {title || fallbackTitle}
+        </span>
+        {badgeText && (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+            {badgeText}
+          </span>
+        )}
+      </div>
       {lastUpdatedLabel.length > 0 ? (
         <span
           className="mt-0.5 block truncate text-xs text-muted-foreground"

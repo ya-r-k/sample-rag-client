@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CitationLink } from '../../../entities/chat/ui/citation-link'
 import { cn } from '../../../shared/lib/cn'
 import { MessageGenerationSteps } from './message-generation-steps'
@@ -13,6 +14,7 @@ export function AssistantMessageTurn({
   documentsById,
   isSubmitting,
 }: AssistantMessageTurnProps) {
+  const { t } = useTranslation()
   const { steps, isStreaming, streamPhase, trackKey } = useStepsForAssistantMessage(
     msg.id,
     messageIndex,
@@ -43,6 +45,11 @@ export function AssistantMessageTurn({
           )}
         >
           <p className="whitespace-pre-wrap">{msg.text}</p>
+          {msg.usesOutdatedSources && (
+            <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 dark:border-red-600/40 dark:bg-red-900/10 dark:text-red-200">
+              {t('chat.outdatedMessageWarning')}
+            </p>
+          )}
           {msg.sourceReferences && msg.sourceReferences?.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2 border-t border-muted pt-2">
               {msg.sourceReferences.map((source, i) => (

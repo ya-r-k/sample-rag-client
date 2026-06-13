@@ -3,7 +3,7 @@
  * Upload body: UploadDocumentRequestModel (name, scopeId, file with base64 content + fileName).
  * List: POST /documents/filter with GetDocumentsByModel (no GET list).
  */
-import { apiPost, apiDelete } from './client'
+import { apiPost, apiPut, apiDelete } from './client'
 import { authorizedFetch } from './token-manager'
 
 export type DocumentDto = {
@@ -12,6 +12,7 @@ export type DocumentDto = {
   localLink?: string
   originalLink?: string
   scopeId: string
+  isOutOfDate?: boolean
 }
 
 /** UploadDocumentRequestModel — API expects JSON with base64 file content. */
@@ -28,9 +29,14 @@ export type UploadDocumentRequestModel = {
 export type GetDocumentsByModel = {
   lastId?: string
   batchSize?: number
+  isOutOfDate?: boolean
 }
 
 export type ListDocumentsParams = GetDocumentsByModel
+
+export type UpdateDocumentOutdatedRequestModel = {
+  isOutOfDate: boolean
+}
 
 /** POST /api/documents/filter — list/filter documents. */
 export async function listDocuments(
@@ -39,6 +45,7 @@ export async function listDocuments(
   const body: GetDocumentsByModel = {
     lastId: params?.lastId,
     batchSize: params?.batchSize,
+    isOutOfDate: params?.isOutOfDate,
   }
   return apiPost<GetDocumentsByModel, DocumentDto[]>('/api/documents/filter', body)
 }
@@ -46,6 +53,17 @@ export async function listDocuments(
 /** POST /api/documents/filter/ids — get documents by ids. */
 export async function getDocumentsByIds(ids: string[]): Promise<DocumentDto[]> {
   return apiPost<string[], DocumentDto[]>('/api/documents/filter/ids', ids)
+}
+
+/** PUT /api/documents/outdated/{id} — toggle the outdated state on a document. */
+export async function updateDocumentOutdated(
+  id: string,
+  body: UpdateDocumentOutdatedRequestModel,
+): Promise<void> {
+  await apiPut<UpdateDocumentOutdatedRequestModel, void>(
+    `/api/documents/outdated/${encodeURIComponent(id)}`,
+    body,
+  )
 }
 
 /** Convert File to base64. */

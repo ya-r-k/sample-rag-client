@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { listDocuments, deleteDocument, uploadDocument, updateDocumentOutdated, type DocumentDto } from '../../../shared/api/documents'
+import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
 import { useDocumentsPage } from './documents-page.hook'
 import { DocumentsPageModal } from './documents-page-modal'
@@ -24,6 +28,22 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
     handleLoadMore,
     isMoreDisabled,
   } = useDocumentsPage(isAdmin)
+
+  const updateOutdatedMutation = useMutation({
+    mutationFn: async ({ id, isOutOfDate }: { id: string; isOutOfDate: boolean }) =>
+      updateDocumentOutdated(id, { isOutOfDate }),
+    onSuccess: (_data, variables) => {
+      queryClient.setQueriesData<DocumentDto[]>({ queryKey: ['documents'] }, (prev) =>
+        (prev ?? []).map((doc) =>
+          doc.id === variables.id ? { ...doc, isOutOfDate: variables.isOutOfDate } : doc,
+        ),
+      )
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['chats', 20] })
+      queryClient.invalidateQueries({ queryKey: ['chat-messages'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['chat-documents-by-ids'], exact: false })
+    },
+  })
 
   if (!isAdmin) {
     return (
@@ -75,6 +95,11 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       <p className="truncate font-medium text-foreground" title={doc.name}>
                         {doc.name}
                       </p>
+                      {doc.isOutOfDate && (
+                        <span className="mt-1 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {t('documentsPage.outdatedBadge')}
+                        </span>
+                      )}
                       <div>
                         <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
                           {doc.scopeName}
@@ -82,7 +107,7 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       </div>
                       {doc.localLink && (
                         <a
-                          href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}`}
+                          href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}${doc.isOutOfDate ? '&isOutOfDate=1' : ''}`}
                           target="_blank"
                           rel="noreferrer"
                           className="mt-0.5 inline-flex text-[11px] text-sky-600 underline hover:text-sky-700"
@@ -102,6 +127,12 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <Button
+                        onClick={() => updateOutdatedMutation.mutate({ id: doc.id, isOutOfDate: !doc.isOutOfDate })}
+                        className="rounded-md border border-muted bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {doc.isOutOfDate ? t('documentsPage.markCurrent') : t('documentsPage.markOutdated')}
+                      </Button>
                       <Button
                         onClick={() => {
                           setEditingDocument(doc)

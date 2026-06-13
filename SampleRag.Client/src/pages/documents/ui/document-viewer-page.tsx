@@ -2,7 +2,7 @@ import { Spinner } from '../../../shared/ui/spinner'
 import { useDocumentViewerPage } from './document-viewer-page.hook'
 
 export function DocumentViewerPage() {
-  const { t, localPath, pageNumber, blobUrl, isLoading, error, title } = useDocumentViewerPage()
+  const { t, localPath, pageNumber, blobUrl, isLoading, error, title, isOutOfDate } = useDocumentViewerPage()
 
   if (!localPath) {
     return (
@@ -32,12 +32,17 @@ export function DocumentViewerPage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-background">
-      <iframe
-        title={title}
-        src={`${blobUrl}#page=${pageNumber}`}
-        className="h-full w-full border-0"
-      />
-    </div>
+  <div className="h-screen w-screen bg-background">
+    {isOutOfDate && (
+      <div className="w-full bg-red-600 text-white px-4 py-2 text-sm font-semibold">
+        Этот документ помечен как устаревший
+      </div>
+    )}
+    <iframe
+      title={title}
+      src={`${blobUrl}#page=${pageNumber}`}
+      className="h-full w-full border-0"
+    />
+  </div>
   )
 }
