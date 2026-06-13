@@ -47,6 +47,11 @@ export async function createScope(body: CreateScopeRequest[]): Promise<ScopeDto>
   return Array.isArray(result) ? result[0] : result
 }
 
+/** DELETE /api/knowledgescopes/{id} — delete scope. Returns 204. */
+export async function deleteScope(scopeId: string): Promise<void> {
+  await apiDelete(`/api/knowledgescopes/${encodeURIComponent(scopeId)}`)
+}
+
 /** POST /api/knowledgescopes/{id}/users — add user(s) to scope. Returns 204. */
 export async function addScopeUsers(
   scopeId: string,

@@ -16,7 +16,9 @@ export function QueryInput(props: QueryInputProps) {
     handleSubmit,
     handleContentInput,
     handlePaste,
+    handleKeyDown,
     disabled,
+    isGenerating,
     className,
     flipOptionsUp,
     containerRef,
@@ -38,24 +40,28 @@ export function QueryInput(props: QueryInputProps) {
         <div
           ref={editorRef}
           id="user-query-input"
-          contentEditable={true}
+          contentEditable={!disabled && !isGenerating}
           suppressContentEditableWarning={true}
           onInput={handleContentInput}
           onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
           role="textbox"
           aria-placeholder={effectivePlaceholder}
           aria-label={t('queryInput.ariaLabel')}
           style={{ userSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-          className="col-start-1 col-end-4 row-start-1 row-end-2 my-3
-            w-full h-full 
-            max-h-[20vh] overflow-y-auto scrollbar-thin scrollbar-track-muted scrollbar-thumb-sky-700
-            empty:before:content-[attr(aria-placeholder)] empty:before:text-gray-500 dark:empty:before:text-gray-400 empty:before:pointer-events-none empty:before:select-none
-            placeholder-quieter placeholder:select-none
-            bg-transparent text-gray-900
-            dark:text-white font-sans text-sm 
-            resize-none outline-none selection:bg-blue-200 
-            dark:selection:bg-blue-800/20 
-            p-0 min-h-[2.5rem]"
+          className={cn(
+            "col-start-1 col-end-4 row-start-1 row-end-2 my-3",
+            "w-full h-full",
+            "max-h-[20vh] overflow-y-auto h-full scrollbar-thin scrollbar-track-muted scrollbar-thumb-sky-700",
+            "empty:before:content-[attr(aria-placeholder)] empty:before:text-gray-500 dark:empty:before:text-gray-400 empty:before:pointer-events-none empty:before:select-none",
+            "placeholder-quieter placeholder:select-none",
+            "bg-transparent text-gray-900",
+            "dark:text-white font-sans text-sm",
+            "resize-none outline-none selection:bg-blue-200",
+            "dark:selection:bg-blue-800/20",
+            "p-0 min-h-[2.5rem]",
+            (disabled || isGenerating) && "opacity-50 cursor-not-allowed"
+          )}
         />
         <div
           className={cn(
@@ -76,7 +82,7 @@ export function QueryInput(props: QueryInputProps) {
           <Button
             className="transition-all duration-200 rounded-full aspect-square flex items-center justify-center h-7 w-7 shrink-0 bg-white text-gray-900"
             type="submit"
-            disabled={!text.trim() || disabled}
+            disabled={!text.trim() || disabled || isGenerating}
             aria-label={t('queryInput.sendAriaLabel')}
           >
             <ArrowUp className="w-3 h-3" />

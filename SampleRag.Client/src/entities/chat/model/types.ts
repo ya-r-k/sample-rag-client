@@ -26,4 +26,5 @@ export type Chat = {
   title: string
   scopeId: string
   ownerIds: string[]
+  lastUpdatedAt?: string
 }

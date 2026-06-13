@@ -1,34 +1,27 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getScopes, createScope } from '../../../shared/api/scopes'
 import { cn } from '../../../shared/lib/cn'
-import { useTranslation } from 'react-i18next'
 import { Button } from '../../../shared/ui/button'
+import { useScopesPage } from './scopes-page.hook'
+import { ScopesPageDeleteModal } from './scopes-page-delete-modal'
 
 type ScopesPageProps = {
   isAdmin?: boolean
 }
 
 export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
-  const { t } = useTranslation()
-  const [lastId, setLastId] = useState(undefined as string | undefined)
-  const [newName, setNewName] = useState('')
-  const queryClient = useQueryClient()
-
-  const { data: scopes = [] } = useQuery({
-    queryKey: ['groups', { batchSize: 10, lastId }],
-    queryFn: () => getScopes({ batchSize: 10, lastId }),
-  })
-
-  const hasNextPage = scopes.length === 10
-
-  const createMutation = useMutation({
-    mutationFn: createScope,
-    onSuccess: () => {
-      setNewName('')
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
+  const {
+    t,
+    scopes,
+    scopeToDelete,
+    setScopeToDelete,
+    newName,
+    setNewName,
+    createMutation,
+    deleteMutation,
+    hasNextPage,
+    handleCreateSubmit,
+    handleLoadMore,
+    isCreateDisabled,
+  } = useScopesPage(isAdmin)
 
   if (!isAdmin) {
     return (
@@ -62,6 +55,15 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
                   {scope.id}
                 </p>
               </div>
+              <div className="mt-4 flex items-center justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setScopeToDelete(scope)}
+                  className="rounded-md border border-destructive bg-red-600 px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {t('scopesPage.delete')}
+                </Button>
+              </div>
             </div>
           ))}
 
@@ -74,12 +76,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
             </div>
             <form
               className="mt-3 space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-                const value = newName.trim()
-                if (!value || createMutation.isPending) return
-                createMutation.mutate([{ name: value }])
-              }}
+              onSubmit={handleCreateSubmit}
             >
               <input
                 type="text"
@@ -91,7 +88,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
               />
               <Button
                 type="submit"
-                disabled={createMutation.isPending || !newName.trim()}
+                disabled={isCreateDisabled}
                 className={cn(
                   'inline-flex items-center justify-center rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60',
                 )}
@@ -104,7 +101,7 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
 
         <div className="flex items-center justify-between gap-2">
           <Button
-            onClick={() => setLastId(scopes[scopes.length - 1].id)}
+            onClick={handleLoadMore}
             disabled={!hasNextPage}
             className="rounded-md border border-muted bg-background px-3 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -112,6 +109,15 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
           </Button>
         </div>
       </section>
+
+      {scopeToDelete && (
+        <ScopesPageDeleteModal
+          scopeToDelete={scopeToDelete}
+          isDeleting={deleteMutation.isPending}
+          onClose={() => setScopeToDelete(null)}
+          onConfirm={() => deleteMutation.mutate(scopeToDelete.id)}
+        />
+      )}
     </div>
   )
 }

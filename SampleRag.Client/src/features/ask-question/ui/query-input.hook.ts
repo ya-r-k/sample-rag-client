@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslation } from 'react-i18next'
 import { useMessageSubmissionStore } from '../../../shared/store/message-submission-store'
 import { useChatsStore } from '../../../shared/store/chats-store'
+import { useMessageGenerationStepsStore } from '../../../shared/store/message-generation-steps-store'
 import { QueryInputProps } from './query-input.props'
 
 const ESTIMATED_DROPDOWN_PX = 240
@@ -19,6 +20,7 @@ export function useQueryInput({
   const setForm = useMessageSubmissionStore((s) => s.setForm)
 
   const chats = useChatsStore((s) => s.chats)
+  const activeTurnId = useMessageGenerationStepsStore((s) => s.activeTurnId)
   const chatScopeId = useMemo(
     () => (chatId ? chats.find((c) => c.id === chatId)?.scopeId ?? null : null),
     [chats, chatId],
@@ -32,11 +34,14 @@ export function useQueryInput({
 
   const effectivePlaceholder = placeholder ?? t('chat.placeholderAsk')
 
+  const isGenerating = activeTurnId !== null
+
   useEffect(() => {
     if (chatScopeId) {
       setScopeId(chatScopeId)
     }
   }, [chatScopeId])
+
 
   useEffect(() => {
     if (scopeId) {
@@ -115,7 +120,7 @@ export function useQueryInput({
     (e: React.SubmitEvent) => {
       e.preventDefault()
       const trimmed = text.trim()
-      if (!trimmed || disabled) {
+      if (!trimmed || disabled || isGenerating) {
         return
       }
       if (!scopeId) {
@@ -129,7 +134,26 @@ export function useQueryInput({
         ed.textContent = ''
       }
     },
-    [text, disabled, onSubmit, chatId, scopeId, setText],
+    [text, disabled, isGenerating, onSubmit, chatId, scopeId, setText],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          // Allow default behavior for Shift+Enter (line break)
+          return
+        } else {
+          // Prevent default behavior and submit form on Enter
+          e.preventDefault()
+          const syntheticEvent = {
+            preventDefault: () => {},
+          } as React.SubmitEvent
+          handleSubmit(syntheticEvent)
+        }
+      }
+    },
+    [handleSubmit],
   )
 
   return {
@@ -142,7 +166,9 @@ export function useQueryInput({
     handleSubmit,
     handleContentInput,
     handlePaste,
+    handleKeyDown,
     disabled,
+    isGenerating,
     className,
     flipOptionsUp,
     containerRef,

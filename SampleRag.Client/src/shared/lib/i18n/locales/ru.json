@@ -52,7 +52,16 @@
     "newChatTitle": "Чат Sample RAG Client",
     "outdatedSourcesBadge": "Устаревший",
     "outdatedChatWarning": "Этот чат использует устаревшие источники документов. Ответы могут быть неактуальными.",
-    "outdatedMessageWarning": "Этот ответ использует устаревшие источники документов. Отнеситесь к нему как к потенциально неактуальному."
+    "outdatedMessageWarning": "Этот ответ использует устаревшие источники документов. Отнеситесь к нему как к потенциально неактуальному.",
+    "lastUpdated": {
+      "justNow": "только что",
+      "minutesAgo_one": "{{count}} минуту назад",
+      "minutesAgo_few": "{{count}} минуты назад",
+      "minutesAgo_many": "{{count}} минут назад",
+      "hoursAgo_one": "{{count}} час назад",
+      "hoursAgo_few": "{{count}} часа назад",
+      "hoursAgo_many": "{{count}} часов назад"
+    }
   },
   "queryInput": {
     "ariaLabel": "Поле ввода вопроса",
@@ -148,6 +157,12 @@
     "scopeNamePlaceholder": "Название области",
     "saving": "Сохранение...",
     "save": "Сохранить",
+    "delete": "Удалить",
+    "deleting": "Удаление...",
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "deleteModalTitle": "Удаление области",
+    "deleteModalDescription": "Удалить область \"{{name}}\"? Это действие нельзя отменить.",
     "previous": "Назад",
     "next": "Вперед"
   },

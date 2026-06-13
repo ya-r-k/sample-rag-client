@@ -52,7 +52,14 @@
     "newChatTitle": "Sample RAG Client Chat",
     "outdatedSourcesBadge": "Outdated",
     "outdatedChatWarning": "This chat referenced outdated document sources. Answers may be stale.",
-    "outdatedMessageWarning": "This answer used outdated document sources. Treat it as possibly stale."
+    "outdatedMessageWarning": "This answer used outdated document sources. Treat it as possibly stale.",
+    "lastUpdated": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago"
+    }
   },
   "queryInput": {
     "ariaLabel": "User query input",
@@ -148,6 +155,12 @@
     "scopeNamePlaceholder": "Scope name",
     "saving": "Saving...",
     "save": "Save",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "deleteModalTitle": "Delete scope",
+    "deleteModalDescription": "Delete scope \"{{name}}\"? This action cannot be undone.",
     "more": "More scopes..."
   },
   "createScope": {

@@ -11,6 +11,8 @@ export type ChatDto = {
   scopeId: string
   ownerIds: string[]
   hasOutdatedSources?: boolean
+  /** ISO 8601; last user+AI turn (AI message CreatedAt). */
+  lastUpdatedAt?: string
 }
 
 export type MessageDto = {

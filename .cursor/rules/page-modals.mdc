@@ -1,0 +1,13 @@
+---
+description: Keep page modals in separate components
+globs:
+  - "SampleRag.Client/src/pages/**/ui/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Page Modal Components
+
+- If a page renders a modal, move the entire modal overlay and dialog markup into a separate colocated component.
+- Treat the whole block inside conditions like `{modalMode && (` or `{scopeToDelete && (` as modal UI that belongs in its own component.
+- Keep page files focused on page layout, state wiring, and event handlers.
+- The page may keep the modal state and pass props down, but should not inline the dialog structure itself.
