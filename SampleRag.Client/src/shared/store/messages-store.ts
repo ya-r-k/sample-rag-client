@@ -41,9 +41,6 @@ function ensureAssistantMessage(
     text: '',
     aiGenerated: true,
     sourceReferences: [],
-    promptTokens: undefined,
-    completionTokens: undefined,
-    totalTokens: undefined,
     chatId: targetChatId,
   }
   const next = [...items]
@@ -111,9 +108,6 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
             text: '',
             aiGenerated: true,
             sourceReferences: [],
-            promptTokens: undefined,
-            completionTokens: undefined,
-            totalTokens: undefined,
             chatId,
           },
         ],
@@ -133,9 +127,6 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
               text: '',
               aiGenerated: true,
               sourceReferences: [],
-              promptTokens: undefined,
-              completionTokens: undefined,
-              totalTokens: undefined,
               chatId,
             },
           ],
@@ -158,9 +149,6 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
               text: '',
               aiGenerated: true,
               sourceReferences: [],
-              promptTokens: undefined,
-              completionTokens: undefined,
-              totalTokens: undefined,
               chatId,
             },
           ],
@@ -182,20 +170,6 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
           chatId,
           aiGenerated: true,
           text: `${currentText}${part.text}`,
-        }
-      }
-
-      // Apply token usage metrics if available
-      if (
-        part.promptTokens !== undefined ||
-        part.completionTokens !== undefined ||
-        part.totalTokens !== undefined
-      ) {
-        next[assistantIndex] = {
-          ...next[assistantIndex],
-          promptTokens: part.promptTokens ?? next[assistantIndex].promptTokens,
-          completionTokens: part.completionTokens ?? next[assistantIndex].completionTokens,
-          totalTokens: part.totalTokens ?? next[assistantIndex].totalTokens,
         }
       }
 
