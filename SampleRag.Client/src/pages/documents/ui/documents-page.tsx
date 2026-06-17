@@ -15,6 +15,7 @@ type DocumentsPageProps = {
  * Note: API has no GET /documents; list is left as a simple placeholder.
  */
 export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
+  const queryClient = useQueryClient()
   const {
     t,
     documents,
@@ -33,12 +34,17 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
     mutationFn: async ({ id, isOutOfDate }: { id: string; isOutOfDate: boolean }) =>
       updateDocumentOutdated(id, { isOutOfDate }),
     onSuccess: (_data, variables) => {
-      queryClient.setQueriesData<DocumentDto[]>({ queryKey: ['documents'] }, (prev) =>
-        (prev ?? []).map((doc) =>
+      const queryKey = ['documents', { batchSize: 10 }];
+    queryClient.setQueryData(queryKey, (oldData: any) => {
+      if (!oldData) return oldData;
+      const newPages = oldData.pages.map((page: DocumentDto[]) =>
+        page.map((doc) =>
           doc.id === variables.id ? { ...doc, isOutOfDate: variables.isOutOfDate } : doc,
         ),
-      )
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      );
+      return { ...oldData, pages: newPages };
+    });
+    queryClient.invalidateQueries({ queryKey: ['documents'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['chats', 20] })
       queryClient.invalidateQueries({ queryKey: ['chat-messages'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['chat-documents-by-ids'], exact: false })
