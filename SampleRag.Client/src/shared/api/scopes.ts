@@ -7,6 +7,8 @@ import { apiPost, apiDelete } from './client'
 export type ScopeDto = {
   id: string
   name: string
+  documentsCount: number
+  indexPercentage: number
 }
 
 /** CreateScopeRequest: single or array; usersIds optional. */

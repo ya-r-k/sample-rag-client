@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { listDocuments, deleteDocument, uploadDocument, updateDocumentOutdated, type DocumentDto } from '../../../shared/api/documents'
 import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
+import { IndexProgress } from '../../../shared/ui/index-progress'
 import { useDocumentsPage } from './documents-page.hook'
 import { DocumentsPageModal } from './documents-page-modal'
 
@@ -95,42 +96,44 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                 {documents.map((doc) => (
                   <li
                     key={doc.id}
-                    className="flex items-center justify-between gap-3 rounded-md border border-muted bg-muted/30 px-3 py-2 text-xs"
+                    className="flex flex-col gap-3 rounded-md border border-muted bg-muted/30 px-3 py-2 text-xs"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground" title={doc.name}>
-                        {doc.name}
-                      </p>
-                      {doc.isOutOfDate && (
-                        <span className="mt-1 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white">
-                          {t('documentsPage.outdatedBadge')}
-                        </span>
-                      )}
-                      <div>
-                        <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
-                          {doc.scopeName}
-                        </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground" title={doc.name}>
+                          {doc.name}
+                        </p>
+                        {doc.isOutOfDate && (
+                          <span className="mt-1 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            {t('documentsPage.outdatedBadge')}
+                          </span>
+                        )}
+                        <div>
+                          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
+                            {doc.scopeName}
+                          </span>
+                        </div>
+                        {doc.localLink && (
+                          <a
+                            href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-0.5 inline-flex text-[11px] text-sky-600 underline hover:text-sky-700"
+                          >
+                            {t('documentsPage.viewLocal')}
+                          </a>
+                        )}
+                        {doc.originalLink && (
+                          <a
+                            href={doc.originalLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-0.5 inline-flex text-[11px] text-sky-600 underline hover:text-sky-700"
+                          >
+                            {t('documentsPage.viewOriginal')}
+                          </a>
+                        )}
                       </div>
-                      {doc.localLink && (
-                        <a
-                          href={`/documents/view?path=${encodeURIComponent(doc.localLink)}&name=${encodeURIComponent(doc.name)}${doc.isOutOfDate ? '&isOutOfDate=1' : ''}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-0.5 inline-flex text-[11px] text-sky-600 underline hover:text-sky-700"
-                        >
-                          {t('documentsPage.viewLocal')}
-                        </a>
-                      )}
-                      {doc.originalLink && (
-                        <a
-                          href={doc.originalLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-0.5 inline-flex text-[11px] text-sky-600 underline hover:text-sky-700"
-                        >
-                          {t('documentsPage.viewOriginal')}
-                        </a>
-                      )}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button
@@ -159,6 +162,7 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                         {t('documentsPage.delete')}
                       </Button>
                     </div>
+                    <IndexProgress value={doc.indexPercentage} />
                   </li>
                 ))}
               </ul>

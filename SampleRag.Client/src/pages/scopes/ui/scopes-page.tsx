@@ -1,5 +1,6 @@
 import { cn } from '../../../shared/lib/cn'
 import { Button } from '../../../shared/ui/button'
+import { IndexProgress } from '../../../shared/ui/index-progress'
 import { useScopesPage } from './scopes-page.hook'
 import { ScopesPageDeleteModal } from './scopes-page-delete-modal'
 
@@ -47,15 +48,15 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
           {scopes.map((scope) => (
             <div
               key={scope.id}
-              className="flex flex-col justify-between rounded-lg border border-muted bg-background p-4 text-sm"
+              className="flex flex-col gap-3 rounded-lg border border-muted bg-background p-4 text-sm"
             >
-              <div>
+              <div className="space-y-1">
                 <p className="font-semibold text-foreground">{scope.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground truncate" title={scope.id}>
-                  {scope.id}
+                <p className="text-xs text-muted-foreground">
+                  {t('scopesPage.documentsCount', { count: scope.documentsCount })}
                 </p>
               </div>
-              <div className="mt-4 flex items-center justify-end">
+              <div className="flex items-center justify-end">
                 <Button
                   type="button"
                   onClick={() => setScopeToDelete(scope)}
@@ -64,6 +65,9 @@ export function ScopesPage({ isAdmin = false }: ScopesPageProps) {
                   {t('scopesPage.delete')}
                 </Button>
               </div>
+              <IndexProgress
+                value={scope.documentsCount > 0 ? scope.indexPercentage : null}
+              />
             </div>
           ))}
 

@@ -12,6 +12,7 @@ export type DocumentDto = {
   localLink?: string
   originalLink?: string
   scopeId: string
+  indexPercentage: number
   isOutOfDate?: boolean
 }
 
