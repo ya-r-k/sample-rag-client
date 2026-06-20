@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { listDocuments, deleteDocument, uploadDocument, updateDocumentOutdated, type DocumentDto } from '../../../shared/api/documents'
+import { DocumentForm } from '../../../features/upload-document/ui/document-form'
 import { Button } from '../../../shared/ui/button'
 import { IndexProgress } from '../../../shared/ui/index-progress'
 import { useDocumentsPage } from './documents-page.hook'
@@ -12,6 +16,7 @@ type DocumentsPageProps = {
  * Note: API has no GET /documents; list is left as a simple placeholder.
  */
 export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
+  const queryClient = useQueryClient()
   const {
     t,
     documents,
@@ -25,6 +30,27 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
     handleLoadMore,
     isMoreDisabled,
   } = useDocumentsPage(isAdmin)
+
+  const updateOutdatedMutation = useMutation({
+    mutationFn: async ({ id, isOutOfDate }: { id: string; isOutOfDate: boolean }) =>
+      updateDocumentOutdated(id, { isOutOfDate }),
+    onSuccess: (_data, variables) => {
+      const queryKey = ['documents', { batchSize: 10 }];
+    queryClient.setQueryData(queryKey, (oldData: any) => {
+      if (!oldData) return oldData;
+      const newPages = oldData.pages.map((page: DocumentDto[]) =>
+        page.map((doc) =>
+          doc.id === variables.id ? { ...doc, isOutOfDate: variables.isOutOfDate } : doc,
+        ),
+      );
+      return { ...oldData, pages: newPages };
+    });
+    queryClient.invalidateQueries({ queryKey: ['documents'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['chats', 20] })
+      queryClient.invalidateQueries({ queryKey: ['chat-messages'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['chat-documents-by-ids'], exact: false })
+    },
+  })
 
   if (!isAdmin) {
     return (
@@ -77,6 +103,11 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                         <p className="truncate font-medium text-foreground" title={doc.name}>
                           {doc.name}
                         </p>
+                        {doc.isOutOfDate && (
+                          <span className="mt-1 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            {t('documentsPage.outdatedBadge')}
+                          </span>
+                        )}
                         <div>
                           <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-medium text-green-100">
                             {doc.scopeName}
@@ -103,27 +134,33 @@ export function DocumentsPage({ isAdmin = false }: DocumentsPageProps) {
                           </a>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          onClick={() => {
-                            setEditingDocument(doc)
-                            setModalMode('edit')
-                          }}
-                          className="rounded-md border border-destructive bg-destructive px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        >
-                          {t('documentsPage.edit')}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            const confirmed = window.confirm(t('documentsPage.deleteConfirm', { name: doc.name }))
-                            if (!confirmed) return
-                            deleteMutation.mutate(doc.id)
-                          }}
-                          className="rounded-md border border-destructive bg-red-600 px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        >
-                          {t('documentsPage.delete')}
-                        </Button>
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        onClick={() => updateOutdatedMutation.mutate({ id: doc.id, isOutOfDate: !doc.isOutOfDate })}
+                        className="rounded-md border border-muted bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {doc.isOutOfDate ? t('documentsPage.markCurrent') : t('documentsPage.markOutdated')}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setEditingDocument(doc)
+                          setModalMode('edit')
+                        }}
+                        className="rounded-md border border-destructive bg-destructive px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {t('documentsPage.edit')}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const confirmed = window.confirm(t('documentsPage.deleteConfirm', { name: doc.name }))
+                          if (!confirmed) return
+                          deleteMutation.mutate(doc.id)
+                        }}
+                        className="rounded-md border border-destructive bg-red-600 px-2 py-1 text-[11px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {t('documentsPage.delete')}
+                      </Button>
                     </div>
                     <IndexProgress value={doc.indexPercentage} />
                   </li>

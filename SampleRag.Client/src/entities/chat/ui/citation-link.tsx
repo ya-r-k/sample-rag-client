@@ -7,8 +7,14 @@ import type { DocumentDto } from '../../../shared/api/documents'
  * GET /api/files/assets/documents/{fileName}
  * Uses documentId as fileName when no explicit fileName is provided.
  */
-export function getDocumentAssetUrl(localLink: string, name: string, pageNumber?: number): string {
-  const base = `/documents/view?path=${encodeURIComponent(localLink)}&name=${encodeURIComponent(name)}`
+export function getDocumentAssetUrl(
+  localLink: string,
+  name: string,
+  pageNumber?: number,
+  isOutOfDate?: boolean,
+): string {
+  const outdatedParam = isOutOfDate ? '&isOutOfDate=1' : ''
+  const base = `/documents/view?path=${encodeURIComponent(localLink)}&name=${encodeURIComponent(name)}${outdatedParam}`
   if (pageNumber != null && pageNumber > 0) {
     return `${base}&page=${pageNumber}`
   }
@@ -20,13 +26,18 @@ type CitationLinkProps = {
   /** When API provides document name/fileName, use it for the URL; otherwise documentId is used */
   fileName?: string
   /** Loaded document metadata — used for label and better file path when available */
-  document?: Pick<DocumentDto, 'id' | 'name' | 'localLink'>
+  document?: Pick<DocumentDto, 'id' | 'name' | 'localLink' | 'isOutOfDate'>
   className?: string
   children?: React.ReactNode
 }
 
 export function CitationLink({ source, document: doc, className, children }: CitationLinkProps) {
-  const url = getDocumentAssetUrl(doc?.localLink ?? '', doc?.name ?? '', source.pageNumber)                          
+  const url = getDocumentAssetUrl(
+    doc?.localLink ?? '',
+    doc?.name ?? '',
+    source.pageNumber,
+    doc?.isOutOfDate,
+  )
 
   const label =
     children ??

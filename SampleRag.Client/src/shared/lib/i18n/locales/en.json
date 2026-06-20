@@ -50,6 +50,9 @@
     "sourcePage": "[Source: p.{{page}}]",
     "sourceWithDocName": "{{name}} · p.{{page}}",
     "newChatTitle": "Sample RAG Client Chat",
+    "outdatedSourcesBadge": "Outdated",
+    "outdatedChatWarning": "This chat referenced outdated document sources. Answers may be stale.",
+    "outdatedMessageWarning": "This answer used outdated document sources. Treat it as possibly stale.",
     "lastUpdated": {
       "justNow": "just now",
       "minutesAgo_one": "{{count}} minute ago",
@@ -114,7 +117,10 @@
     "noScopesYet": "No scopes yet",
     "noMatchingScopes": "No matching scopes found.",
     "close": "Close",
-    "deleteConfirm": "Delete document \"{{name}}\"? This action cannot be undone."
+    "deleteConfirm": "Delete document \"{{name}}\"? This action cannot be undone.",
+    "outdatedBadge": "Outdated",
+    "markOutdated": "Mark as outdated",
+    "markCurrent": "Mark as current"
   },
   "documentUpload": {
     "dropActive": "Drop PDF here...",

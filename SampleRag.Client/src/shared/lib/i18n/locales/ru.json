@@ -50,6 +50,9 @@
     "sourcePage": "[Источник: стр. {{page}}]",
     "sourceWithDocName": "{{name}} · стр. {{page}}",
     "newChatTitle": "Чат Sample RAG Client",
+    "outdatedSourcesBadge": "Устаревший",
+    "outdatedChatWarning": "Этот чат использует устаревшие источники документов. Ответы могут быть неактуальными.",
+    "outdatedMessageWarning": "Этот ответ использует устаревшие источники документов. Отнеситесь к нему как к потенциально неактуальному.",
     "lastUpdated": {
       "justNow": "только что",
       "minutesAgo_one": "{{count}} минуту назад",
@@ -116,7 +119,10 @@
     "noScopesYet": "Областей пока нет",
     "noMatchingScopes": "Подходящие области не найдены.",
     "close": "Закрыть",
-    "deleteConfirm": "Удалить документ \"{{name}}\"? Это действие нельзя отменить."
+    "deleteConfirm": "Удалить документ \"{{name}}\"? Это действие нельзя отменить.",
+    "outdatedBadge": "Устаревший",
+    "markOutdated": "Пометить как устаревший",
+    "markCurrent": "Пометить как актуальный"
   },
   "documentUpload": {
     "dropActive": "Отпустите PDF сюда...",

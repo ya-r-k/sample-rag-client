@@ -158,22 +158,21 @@ export const useMessagesStore = create<MessagesState>()((set) => ({
 
   applyMessagePart: (chatId, part, userText) =>
     set((state) => {
-      if (part.step !== GenerationStep.ResponseMessage) {
-        return state
-      }
-      if (part.text === undefined) {
-        return state
-      }
       const prev = state.byChatId[chatId] ?? []
       const { next, assistantIndex } = ensureAssistantMessage(prev, chatId, userText)
       const currentAssistant = next[assistantIndex]
-      const currentText = currentAssistant.text ?? ''
-      next[assistantIndex] = {
-        ...currentAssistant,
-        chatId,
-        aiGenerated: true,
-        text: `${currentText}${part.text}`,
+
+      // Apply text for ResponseMessage step
+      if (part.step === GenerationStep.ResponseMessage && part.text !== undefined) {
+        const currentText = currentAssistant.text ?? ''
+        next[assistantIndex] = {
+          ...currentAssistant,
+          chatId,
+          aiGenerated: true,
+          text: `${currentText}${part.text}`,
+        }
       }
+
       return {
         byChatId: {
           ...state.byChatId,
