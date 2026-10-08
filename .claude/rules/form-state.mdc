@@ -1,0 +1,12 @@
+---
+description: "Use store-backed form state for API submission features"
+globs:
+  - "SampleRag.Client/src/features/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/pages/**/ui/**/*.{ts,tsx}"
+  - "SampleRag.Client/src/widgets/**/ui/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+- For API submission flows, form payload state MUST be managed through a dedicated Zustand store (feature store or shared store), not ad-hoc local component state.
+- Submission components should behave as controlled forms bound to store state.
+- New submission features must define explicit store fields for payload values, update actions per field, and reset actions after successful submit.

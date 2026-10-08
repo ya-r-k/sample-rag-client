@@ -42,8 +42,18 @@ SampleRag.Client/dist/
 SampleRag.Client/package-lock.json
 **/SampleRag.Client.esproj.user
 
-# AI IDEs
-**/.cursor/commands/speckit.*.*
+# Spec Driven Development
+**/.specify/templates
+**/.specify/integrations
+**/.specify/**/scripts
+
+# AI-assisted development files
+**/.cursor/**/speckit.*.md
+**/.cursor/**/speckit-*
+**/.cursor/plans/**/*.*
+**/.claude/**/speckit.*.md
+**/.claude/**/speckit-*
+**/.claude/plans/**/*.*
 
 # Visual Studio
 **/.vs

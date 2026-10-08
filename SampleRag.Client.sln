@@ -8,6 +8,16 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "client", "client", "{3C42D22C-00AB-4021-A9A1-8C5117B1E24E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{92038A32-7898-4173-B387-3B5C896839D6}"
+	ProjectSection(SolutionItems) = preProject
+		.cursorignore = .cursorignore
+		.dockerignore = .dockerignore
+		.gitignore = .gitignore
+		CLAUDE.md = CLAUDE.md
+		Dockerfile = Dockerfile
+		project.md = project.md
+		README.md = README.md
+		.claude\settings.local.json = .claude\settings.local.json
+	EndProjectSection
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "SampleRag.Client", "SampleRag.Client\SampleRag.Client.esproj", "{FFAE6ED2-1F41-BC2D-012E-0B2C9FF9C1AC}"
 EndProject
