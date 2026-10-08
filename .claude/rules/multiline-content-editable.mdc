@@ -1,0 +1,22 @@
+---
+description: "Multi-line free text in forms: use contentEditable div pattern"
+globs:
+  - "SampleRag.Client/src/**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# Multi-line text input (contentEditable)
+
+When the user must enter **multi-line** free text in a form (chat composer, notes, descriptions, etc.), prefer a **`div` with `contentEditable={true}`** over a `<textarea>` if the product already standardizes on that pattern elsewhere in the app.
+
+## Implementation checklist
+- Set **`contentEditable={true}`** and **`suppressContentEditableWarning={true}`** (React).
+- Sync the value on **`onInput`**: read **`textContent`**, normalize with **`.trim()`** (and treat empty string as cleared). If the browser inserts a lone **`<br>`** as “empty” content, normalize by clearing **`innerHTML`** when it equals `'<br>'` so the field matches an empty state.
+- Expose the field to assistive tech: **`role="textbox"`**, a concise **`aria-label`**, and **`aria-placeholder`** when using a placeholder; style the placeholder for the empty state (e.g. Tailwind **`empty:before:`** on `content-[attr(aria-placeholder)]` with muted color and **`pointer-events-none`** / **`select-none`** on the pseudo-element).
+- Multi-line layout: **`whiteSpace: 'pre-wrap'`**, **`wordBreak: 'break-word'`**, and **`userSelect: 'text'`** so wrapping and selection behave like a text area.
+- Constrain height and scroll: **`max-height`** + **`overflow-y: auto`** as needed.
+- After submit or reset, clear both the **canonical state** (store / parent) and the **DOM** (e.g. set **`textContent`** on the element via a **ref**) so the visible field and stored value stay in sync.
+
+## When not to use
+- Single-line inputs: use a normal text input.
+- If you need native form serialization or maximum simplicity without the above sync rules, a `<textarea>` may be appropriate; do not mix patterns in the same flow without a deliberate reason.
